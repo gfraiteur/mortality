@@ -183,7 +183,8 @@ covid_death <-covid_death %>%
 
 # https://opendata.meteo.be/geonetwork/srv/eng/catalog.search;jsessionid=B123D8FF9D843F6B8721B8878EB55479#/metadata/RMI_DATASET_AWS_1DAY
 if ( !file.exists("./data/weathe.cscr")){
- download.file("https://opendata.meteo.be/service/aws/wfs?request=GetFeature&service=WFS&version=1.1.0&typeName=aws:aws_1day&outputFormat=csv", "./data/weather.csv")
+ download.file("https://opendata.meteo.be/service/aws/wfs?request=GetFeature&service=WFS&version=1.1.0&typeName=aws:aws_1day&outputFormat=csv", 
+               "./data/weather.csv")
 }
 
 weather <- read_csv("data/weather.csv", col_types = cols(FID = col_skip(), 
@@ -192,24 +193,6 @@ weather <- read_csv("data/weather.csv", col_types = cols(FID = col_skip(),
 
 weather$date <- as.Date( round_date(weather$timestamp) )
 weather$code <- as.factor(weather$code)
-
-
-### COVID DEATH RATE
-
-# Load infection-death ratio
-covid_ifr <- read_table2("covid_ifr.txt", 
-                         col_types = cols(ifr_without_pi_min = col_skip(), 
-                                          ifr_without_pi_max = col_skip(), 
-                                          ifr_with_pi_min = col_skip(), ifr_with_pi_max = col_skip()), 
-                         skip = 1)
-
-# Expand ages
-covid_ifr <- cbind( covid_ifr, 
-  read.table(text = as.character(covid_ifr$age_group), sep="-", stringsAsFactors=FALSE)  %>%
-  rename ( age_min = V1, age_max = V2) ) %>%
-  select (-age_group )
-
-covid_ifr <- sqldf( "select age, ifr_without, ifr_with from age, covid_ifr where age.age between covid_ifr .age_min and covid_ifr .age_max")
 
 ### DEATH CAUSES
 
@@ -409,17 +392,6 @@ mortality_deviation$deviation <-
   mortality_deviation$mortality - mortality_deviation$mortality_rollmean
 mortality_deviation$relative_deviation <-
   mortality_deviation$mortality / mortality_deviation$mortality_rollmean - 1
-
-
-
-### COVID Death rate by age group
-
-covid_projected_death <-
-  merge( covid_ifr, population_structure %>% filter( year == 2020 ), by = c("age" ) )
-
-covid_projected_death$death_projected = covid_projected_death$population_count * covid_projected_death$ifr_without
-
-sum(covid_projected_death$death_projected)
 
 
 

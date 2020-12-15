@@ -1,14 +1,13 @@
 ---
 title: "Analysis of Belgian mortality data in 2020"
 author: "Gael Fraiteur"
-
 output:
-  word_document:
-    toc: yes
-    toc_depth: '2'
   html_document:
     toc: yes
     toc_depth: 2
+  word_document:
+    toc: yes
+    toc_depth: '2'
   pdf_document:
     toc: yes
     toc_depth: 2
@@ -53,12 +52,22 @@ management and marketing.
 
 The data were downloaded from the following sources:
 
-* Number of deaths: Statbel, [Number of deaths per day, sex, age, region, province, district](https://statbel.fgov.be/en/open-data/number-deaths-day-sex-district-age). For 2020, this data is available until the `r death_2020_max_week`-th week.
-* Structure of population: Statbel, [Population by place of residence, nationality, marital status, age and sex](https://statbel.fgov.be/en/open-data?category=23)
-* Cause of mortality: Statbel, [Causes of death by month, sex, age group and region](https://statbel.fgov.be/en/open-data/causes-death-month-sex-age-group-and-region)
+* Number of deaths: Statbel, 
+  [Number of deaths per day, sex, age, region, province, district](https://statbel.fgov.be/en/open-data/number-deaths-day-sex-district-age).
+  For 2020, this data is available until the `r death_2020_max_week`-th week.
+  
+* Structure of population: Statbel, 
+  [Population by place of residence, nationality, marital status, age and sex](https://statbel.fgov.be/en/open-data?category=23)
+
+* Cause of mortality: Statbel, 
+  [Causes of death by month, sex, age group and region](https://statbel.fgov.be/en/open-data/causes-death-month-sex-age-group-and-region)
+
 * COVID mortality: Sciensano, [Mortality by date, age, sex, and region](https://epistat.wiv-isp.be/covid/)
+
 * General mortality: Human Mortality Database, [Death rates for Belgium, 1x1](https://www.mortality.org/cgi-bin/hmd/country.php?cntr=BEL&level=1)
-* Temperatures: Royal Meteorological Institute of Belgium, [Automatic weather station (AWS) daily observations](https://opendata.meteo.be/geonetwork/srv/eng/catalog.search;jsessionid=B123D8FF9D843F6B8721B8878EB55479#/metadata/RMI_DATASET_AWS_1DAY)
+
+* Temperatures: Royal Meteorological Institute of Belgium, 
+  [Automatic weather station (AWS) daily observations](https://opendata.meteo.be/geonetwork/srv/eng/catalog.search;jsessionid=B123D8FF9D843F6B8721B8878EB55479#/metadata/RMI_DATASET_AWS_1DAY)
 
 The script gives the exact URLS of the source data files we used, as well as the commands we have used to parse and prepare the dataset.
 
@@ -97,7 +106,8 @@ Our model of yearly mortality is built in three steps:
 1. The structure of the population the 1st of January of each year between 2009 and 2020 (i.e. the number of residents of a given age and sex alive on that day).
 
 2. The mortality data for Belgium for the corresponding age, sex and year, i.e. the probability that
-a person who was alive on January 1st morning would be dead on December 31st evening. The expected number of deaths for a given group and year is simply the result of the multiplication of both factors.
+a person who was alive on January 1st morning would be dead on December 31st evening. The expected number of deaths for a given group and year is simply the
+result of the multiplication of both factors.
 
 3. We split the yearly data into weeks based on weekly historic death data.
 
@@ -350,13 +360,18 @@ Note that the initial value of the cumulative metric is arbitrary. Here, we chos
 our model is based on a linear regression over years, and because of the yearly fluctuations, we can expect that the zero point is crossed 
 every second year.
 
-The second arbitrary zero is the one of January 1st, 2020. This one is the consequence of the calibration of our model with real data for the period from 2009 to 2019. It is important to understand how arbitrary this zero is.
+The second arbitrary zero is the one of January 1st, 2020. This one is the consequence of the calibration of our model with real data for the period from 2009 
+to 2019. It is important to understand how arbitrary this zero is.
 
-The cumulative maximal death deficit was observed on March 11th, 2020, with a value of `r abs(round(max_cum_death_deficit))` (point represented in green in the graph above). So when comparing the expected cumulative mortality with the real cumulative mortality, a difference of `r abs(round(max_cum_death_deficit))` can be obtained just by choosing a different beginning of the comparison time window.
+The cumulative maximal death deficit was observed on March 11th, 2020, with a value of `r abs(round(max_cum_death_deficit))` (point represented in green in the 
+graph above). So when comparing the expected cumulative mortality with the real cumulative mortality, a difference of `r abs(round(max_cum_death_deficit))` can 
+be obtained just by choosing a different beginning of the comparison time window.
 
 ### Excess death rate by age group
 
-Taking this remark into account, we can now look at the increased death rate for the year 2020 (between weeks 1 and `r death_2020_max_week`) for different age groups. The following table shows the difference in death rate during the studied period in absolute terms and in terms that are relative to the expected values for 2020.
+Taking this remark into account, we can now look at the increased death rate for the year 2020 (between weeks 1 and `r death_2020_max_week`) for different age 
+groups. The following table shows the difference in death rate during the studied period in absolute terms and in terms that are relative to the expected values 
+for 2020.
 
 
 ```{r}
@@ -496,7 +511,8 @@ mortality_deviation %>%
 ```
 
 
-The next graph  aggregates the data by decade and shows the variance (that is, the square root of the sum of the squares of the deviation relatively to the median) during the whole decade, again with horizontal lines for 0.2%, 1% and 2%.
+The next graph  aggregates the data by decade and shows the variance (that is, the square root of the sum of the squares of the deviation relatively to the 
+median) during the whole decade, again with horizontal lines for 0.2%, 1% and 2%.
 
 ```{r warning=FALSE}
 
@@ -588,7 +604,8 @@ heat_death_2019 <- round(
 The number of people who died during the heat wave of August 2020 was `r heat_death_2020`. By comparison, the
 heat wave of July 2019 caused an excess death of `r heat_death_2019`: 10 times less.
 
-Can this be explained by exceptional temperatures? The following graphs shows the history of maximum daily temperatures in Belgium as well of a 7-day and a 30-day right-aligned moving average of this metric.
+Can this be explained by exceptional temperatures? The following graphs shows the history of maximum daily temperatures in Belgium as well of a 7-day and a 
+30-day right-aligned moving average of this metric.
 
 
 ```{r warning=FALSE}
@@ -652,7 +669,8 @@ net_death_excess_summer <- round(death_excess_summer$max_cum_excess_deaths - dea
 
 ```
 
-During the spring peak, the cumulative excess death was `r net_death_excess_spring`. During the summer, before the August peak, the death deficit was `r net_death_excess_summer`, that is, approximately `r paste(abs(round(100*net_death_excess_summer/net_death_excess_spring)), "%", sep="")`
+During the spring peak, the cumulative excess death was `r net_death_excess_spring`. During the summer, before the August peak, the death deficit was 
+`r net_death_excess_summer`, that is, approximately `r paste(abs(round(100*net_death_excess_summer/net_death_excess_spring)), "%", sep="")`
 of people who died during of COVID19 during spring had their life shortened by less than 3 months.
 
 ### Comparision of number of deaths by age group
@@ -767,7 +785,8 @@ government and mainstream media:
   **Yes** if you look at excess death rate for the age group from 65 to 74 years, i.e. the risk of dying in 2020 compared to expectations.
   
   **No** if you look at absolute death rate number. 2020 is _at most_ 20% worse than a normal year. 
-  The risk of dying during 2020 is up to 20% higher than expected according to the age group. That means that instead of this risk being              approximately 5% at 80 years, it was at 6% in 2020.  For a 40 year-old man, this risk is 0.118% instead of 0.111%.
+  The risk of dying during 2020 is up to 20% higher than expected according to the age group. That means that instead of this risk being              
+  approximately 5% at 80 years, it was at 6% in 2020.  For a 40 year-old man, this risk is 0.118% instead of 0.111%.
 
   For comparison, the death rate of 2020 (i.e., the risk of dying during that year) is approximately the one of 2012. That is, if there
   were in 2012 the same number of deaths than in 2020 for the same population structure, this would be a normal year.
