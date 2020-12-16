@@ -2,17 +2,16 @@
 title: "Analysis of Belgian mortality data in 2020"
 author: "Gael Fraiteur"
 output:
+  github_document:
+    toc: true
+    toc_depth: 2
+    fig_width: 9 
+    fig_height: 6 
   html_document:
     toc: yes
     toc_depth: 2
     fig_width: 9 
     fig_height: 6 
-  word_document:
-    toc: yes
-    toc_depth: '2'
-  pdf_document:
-    toc: yes
-    toc_depth: 2
 ---
 
 ```{r setup, include=FALSE}
