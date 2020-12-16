@@ -21,14 +21,12 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE)
 
 ## Introduction
 
-This article analyses mortality data in Belgium in 2020 (for weeks 1 to `r death_2020_max_week`) and compares them to historical data.
-
 When discussing the effect of the COVID19 epidemic, Belgium is an interesting country to study for several reasons. First, it has
-the highest reported death rate from COVID19 in the world. Then, its governmental body of statistics, Statbel, make mortality
-information available with a delay of just 3 weeks. Last and not least, this is the country where the author grew up.
+the highest reported death rate from COVID19 in the world. Secondly, Statbel, the Belgian governmental agency for statistics, publishes mortality
+information every week with a delay of just 3 weeks. Last and not least, this is the country where the author grew up.
 
-Our approach is to compare the number of deaths in 2020 with the number of deaths that would be _expected_ based on the structure
-of the population on January 1st, 2020 and on the usual death rates. The difference between the expectations and the reality
+Our approach is to compare the number of deaths in 2020 (for weeks 1 to `r death_2020_max_week`) with the number of deaths that would be _expected_ based on 
+the structure of the population on January 1st, 2020 and on the usual death rates. The difference between expectations and reality
 gives us a metric named _excess deaths_ when it is positive, or _deaths deficit_ when it is negative.
 
 We compare this metric with the number of deaths due to COVID as reported by Sciensano, and with historical death and mortality data.
@@ -36,8 +34,8 @@ We compare this metric with the number of deaths due to COVID as reported by Sci
 At the end of the article, we try to answer a few controversial questions based on data.
 
 This article, as well as all R scripts that have been used to compute the data, are hosted on GitHub at https://github.com/gfraiteur/mortality.
-All data comes from open sources and can be downloaded for free. If you have a question or remark related to this article, 
-or if you found a bug or innacurracy, please open an issue on GitHub or, better, submit a pull request.
+All data comes from open sources and can be freely downloaded. If you have a question or remark related to this article, 
+or if you have found a bug or inaccuracy, please open an issue on GitHub or, better, submit a pull request.
 
 
 ## About the author
@@ -69,13 +67,13 @@ The data were downloaded from the following sources:
 * Temperatures: Royal Meteorological Institute of Belgium, 
   [Automatic weather station (AWS) daily observations](https://opendata.meteo.be/geonetwork/srv/eng/catalog.search;jsessionid=B123D8FF9D843F6B8721B8878EB55479#/metadata/RMI_DATASET_AWS_1DAY)
 
-The script gives the exact URLS of the source data files we used, as well as the commands we have used to parse and prepare the dataset.
+The script gives the exact URLs of the source data files we used, as well as the commands we have used to parse and prepare the dataset.
 
 ## Building a predictive model
 
 If we want to compare the actual number of deaths in 2020 with what would be a "normal" number of deaths, we need to define what "normal" is.
 Many authors have taken the average of the past 5 or 10 years as their point of comparison. However, this choice gives numbers that are
-lower than what is realistic because the number of deaths has constantly increased of about 0.5% in the last 10 years. Comparing 2020 to 2015
+lower than what is realistic because the number of deaths has constantly increased of about 0.5% per year in the last 10 years. Comparing 2020 to 2015
 would then cause a difference of 2,500 deaths, which is already significant.
 
 ```{r}
@@ -103,11 +101,11 @@ death_per_year %>%
 
 Our model of yearly mortality is built in three steps: 
 
-1. The structure of the population the 1st of January of each year between 2009 and 2020 (i.e. the number of residents of a given age and sex alive on that day).
+1. The first input is the structure of the population the 1st of January of each year between 2009 and 2020 (i.e. the number of residents of a given age and sex alive on that day).
 
-2. The mortality data for Belgium for the corresponding age, sex and year, i.e. the probability that
+2. The second input is the mortality data for Belgium for the corresponding age, sex and year, i.e. the probability that
 a person who was alive on January 1st morning would be dead on December 31st evening. The expected number of deaths for a given group and year is simply the
-result of the multiplication of both factors.
+product of the first input with the second input.
 
 3. We split the yearly data into weeks based on weekly historic death data.
 
@@ -115,7 +113,7 @@ result of the multiplication of both factors.
 ### 1. Structure of the population
 
 The first input of our model is the structure of the population published by Statbel (see data sources). The data set gives us the number
-of inhabitants who are alive and have a specific age on January 1st of a given year. This data is available since 2009.
+of inhabitants of each sex who are alive and have a specific age on January 1st of a given year. This data is available since 2009.
 
 As you can see on the next graph, the number of people aged 65 years or more is increasing every year by approximately 34,000, a 1.6% growth.
 
@@ -145,11 +143,11 @@ population_older_65 <- population_structure %>%
 
 ### 2. Death rate
 
-The _death rate_ is the probability that someone of a given group (i.e. given age group and sex) who is alive
-on January 1st of a year would be alive on January 1st of the same year.
+The _death rate_ for a given period is the probability that someone of a given group (i.e. given age group and sex) who is alive
+at the beginning of the period would be alive at the end of the period. Unless stated otherwise, the period is a calendar year.
 
 Let's look at the death rate for a few ages. As you can see, the death rate is continuously decreasing except for
-the age group over 100. This graph also shows a greater variance of death rate for older age groups, which seems
+the age group over 100. This graph also shows a greater variance of the death rate for older age groups, which seems
 to mean that these age groups are more sensitive to events that happen less than once a year, such as epidemics
 or exceptional weather.
 
@@ -175,13 +173,14 @@ mortality_for_graph %>%
 
 ```
 
-We model the death rate with a linear regression for each age and sex. This model allows to extrapolate
+We model the death rate with a linear regression for each age and sex. This model allows us to extrapolate
 the data to 2019 and 2020, but it also removes the year-to-year variations for all previous years. That is, this
-death rate model removes the effect of epidemics and weather event that happen less frequently than yearly.
+death rate model removes the effect of epidemics and weather conditions that happen less frequently than yearly.
 
 Once we have a death rate model for each group and year, we multiply this coefficient by the actual
-population for this group and year, which should give us the number of expected deaths. The expected and observed
-number of deaths, summed from 2009 to 2019, don't match exactly, so we apply the following correction factors:
+population for this group and year, which should give us the number of expected deaths. However, the expected and observed
+number of deaths, summed from 2009 to 2019, don't match exactly. This discrepancy is expected and its cause is not important.
+To cancel the discrepancy, we apply the following correction factors:
 
 ```{r}
 pivot_wider(model_correction, names_from = sex, values_from = correction  ) %>% 
@@ -279,7 +278,7 @@ death_expected_weekly %>%
 
 ## Excess death rate
 
-_Excess deaths_ is the different between the actual and the expected number of deaths. When there are fewer deaths
+_Excess deaths_ is the different between the actual number and the expected number of deaths. When there are fewer deaths
 than expected, this is called _death deficit_.
 
 The following graphs represents excess deaths from 2009:
@@ -416,7 +415,7 @@ As you can see, the age group whose death rate is the most different in 2020 tha
 which had `r paste(abs(round(100*excess_death_2020_age_20)), "%", sep="")` less risk to die in 2020 than in another year.
 We will come back to this number.
 
-The age group whose death rate is the most affected in 2020 is the 75-84 one, with a risk of dying 
+The age group whose death rate is the most negatively affected in 2020 is the 75-84 one, with a risk of dying 
 `r paste(abs(round(100*excess_death_2020_age_84)), "%", sep="")` higher than expected.
 
 ### Absolute death rate in historical context
@@ -456,11 +455,9 @@ compared_mortality_for_graph %>%
 
 ```
 
-Therefore, the death rates for the groups exhibiting the largest difference are ones that would
-be typical in 2012.
+It can be seen on this graph that the death rates for the groups exhibiting the largest difference are ones that would be typical in 2012.
 
-For more perspective, here the same graph starting from 1900 (data in 1914-1918 are missing
-and the extrapolation in the graph is incorrect)
+For more perspective, here the same graph starting from 1900 on a logarithmic vertical scale.
 
 ```{r}
 
@@ -470,7 +467,7 @@ compared_mortality_for_graph %>%
     geom_point() +
   scale_color_discrete() +
   scale_x_continuous(name = "year", breaks = seq(1900,2020,10)) +
-  scale_y_continuous(labels = scales::percent_format(), name = "death rate relatively to 2020")  +
+  scale_y_log10(labels = scales::percent_format(accuracy=1), name = "death rate relatively to 2020 normal", breaks = 10 ^ seq(0,2,0.2), limit = c(1,100))  +
   theme_minimal() +
   ggtitle("Historic death rate relative to the expected death rate in 2020")
 ```
@@ -478,14 +475,13 @@ compared_mortality_for_graph %>%
 ### Death rate variation in historical context
 
 We have seen that the death rate in 2020 was typical for 2012. How can we then explain the framing of the
-epidemic, by the government and media, as a catastrophe of biblical proportions? Looking at the _variation_
-of death rate instead of the death rate itself gives some hint. 
+epidemic, by the government and media, as a catastrophe of unseen since Word War II or even the Spanish flu? 
+Looking at the _year-to-year variation_ of death rate instead of the death rate itself gives some hints. 
 
-
-How far should we look in the past to see a death rate that is, in absolute terms 1% to 2% higher than normal?
+How far should we look in the past to see a death rate that is, in absolute terms, 1% to 2% higher than normal?
 
 To answer this question, we will use the death rate data of the Human Mortality Database since 1900. We will
-define "normal" as being a 5-year rolling median. 
+define "normal" as being a 5-year rolling median. The median does a better job than the mean to eliminate exceptional events like epidemics.
 
 The following graph shows only strictly positive deviations and the vertical axis is logarithmic, with horizontal
 lines for 0.2%, 1% and 2%, the approximate values of excess death rate for the three oldest age groups.
@@ -511,8 +507,8 @@ mortality_deviation %>%
 ```
 
 
-The next graph  aggregates the data by decade and shows the variance (that is, the square root of the sum of the squares of the deviation relatively to the 
-median) during the whole decade, again with horizontal lines for 0.2%, 1% and 2%.
+The next graph  aggregates the data by decade and shows the maximum deviation of the yearly death rate from the median death rate during the whole decade, 
+again with horizontal lines for 0.2%, 1% and 2%.
 
 ```{r warning=FALSE}
 
@@ -537,19 +533,19 @@ mortality_deviation %>%
 
 It is clear from these 2 graphs that a 2% deviation is usual and even on the small end for the age group over 85 years.
 
-For the groups 65-74 and 75-84, such a deviation from the normal has not been seen since the 1990s.
+However, for the groups 65-74 and 75-84, we have to go back to the 1960s to see a similar deviation.
 
 
 ### Compared death rate: conclusion
 
 How exceptional is 2020 to other years? The conclusion is paradoxical.
 
-If we look at absolute death rate numbers, 2020 is similar to 2012.
+If we look at the absolute death rates, 2020 is similar to 2012. If we look at the excess death rate for the 85+ age group, we also find numbers 
+that would be usual around 2010. We could then say that 2020 is a one-in-ten-years occurrence, which would make it difficult to justify the
+extraordinary restrictions on freedom of movement and gathering.
 
-If we look at the excess death rate for the 85+ age group, we also find numbers that would be usual around 2010.
-
-The real originality of 2020 from the point of view of historic death data is the excess death rate rate of the 64-85 age
-group, for which there is no equivalent since the 1960s.
+However, the real originality of 2020 from the point of view of historic death data is not the absolute death rate, not even the excess death rate
+for the oldest age group, but the _excess death rate of the 64-85 age group_, for which there is no equivalent since the 1960s.
 
 
 This paradox brings light to the polarized discussion between those who believe that the epidemic is a normal event that
@@ -573,13 +569,13 @@ compared_covid_death %>%
     geom_hline(yintercept = 0) + 
     scale_x_date( labels = date_format("%m-%y"), date_breaks = "1 month", name = "date") +
     scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths per week") +
-    ggtitle("COVID19 deaths vs excess deaths per week") + 
+    ggtitle("Weekly COVID19 deaths vs excess deaths") + 
     theme_minimal() +
     theme(legend.title = element_blank())
 ```
 
 
-We can see that the number deaths attributed to COVID19 by Sciensano copies quite well the number of excess deaths
+We can see that the number of deaths attributed to COVID19 by Sciensano copies quite well the number of excess deaths
 estimated by our model, at least during the two epidemic peaks. The most notable exception is during the deaths
 peak of August. The second difference that needs to be discussed is the death deficit after the spring peak.
 
@@ -601,7 +597,7 @@ heat_death_2019 <- round(
 
 ```
 
-The number of people who died during the heat wave of August 2020 was `r heat_death_2020`. By comparison, the
+The number excess deaths during the heat wave of August 2020 was `r heat_death_2020`. By comparison, the
 heat wave of July 2019 caused an excess death of `r heat_death_2019`: 10 times less.
 
 Can this be explained by exceptional temperatures? The following graphs shows the history of maximum daily temperatures in Belgium as well of a 7-day and a 
@@ -626,12 +622,12 @@ weather %>%
 ```
 
 As we can see, the maximal weekly temperatures were not exceptional compared to 2019 or even 2018. Therefore, temperature alone cannot
-be a sufficient explanation of the peek of deaths in August 2020. Other factors need to be consider, for instance a generally
+be a sufficient explanation of the peek of deaths in August 2020. Other factors need to be considered, for instance a generally
 weaker condition of the population due to the epidemic or to the lockdown itself.
 
 ### Death deficit between death peeks
 
-The second difference between the COVID19 death curve and the excess mortality curve is that the second shows a death deficit
+The second difference between the COVID19 death curve and the excess death curve is that the second shows a death deficit
 after the first epidemic peak. This means that a part of people who died during the epidemic peak would have died anyway a couple
 of weeks later.
 
@@ -644,7 +640,7 @@ all_cum_death_expected_weekly %>%
   summarise( excess_death = sum(excess_death), cum_excess_deaths = sum(cum_excess_deaths)) %>%
   ungroup() %>%
   ggplot( aes(x = date)) +
-  geom_line(aes(y = excess_death, col = "weekly excess deaths")) + 
+  geom_line(aes(y = excess_death, col = "weekly excess deaths"), linetype="dashed") + 
   geom_line(aes(y = cum_excess_deaths, col = "cumulative excess deaths")) +
   scale_x_date( date_breaks = "1 month", labels = date_format("%m"), name = "month") +
   ggtitle("Cumulative excess deaths (2020)") +
@@ -701,15 +697,16 @@ reshape2::melt(compared_covid_death_by_age_group,id=("age_group")) %>%
 The numbers are quite similar, except for the oldest age group where COVID19 deaths are 
 `r round(compared_covid_death_age_group_85$covid_death - compared_covid_death_age_group_85$excess_death)` 
 (`r paste(abs(round(100-100*compared_covid_death_age_group_85$covid_death/compared_covid_death_age_group_85$excess_death)), "%", sep="")`)
-higher than excess deaths.
+higher than excess deaths. This means than an approximate 20% of the people over 85 who died of COVID19 during 2020 (or were diagnosed as such)
+would have died from another cause in the same period
 
 ## Decreased death rate of the youngest age group
 
 The death rate of the 0-24 age group is `r paste(abs(round(100*excess_death_2020_age_20)), "%", sep="")` lower in 2020 than expected. How
 can we explain this significant difference? Intuitively, this could be explained by the lower exposure to risk of accidents. Let's test
-this hypothesis.
+this hypothesis based on the _Causes of death by month, sex, age group and region_ data set published by Statbel (see data sources).
 
-The cause category V01-Y98 includes all deaths by external causes, including accidents and homicides. This data is available from 2009 to 2019.
+The cause code V01-Y98 includes all deaths by external causes, including accidents and homicides. This data is available from 2009 to 2019.
 Let's visualize the percent of accidental deaths by age group and sex:
 
 ```{r}
@@ -719,8 +716,8 @@ accidental_death %>%
   summarise( percent_accidental_death = sum( accidental_death_observed ) / sum(all_death_observed)) %>%
   ggplot( aes( x = age_group, y = percent_accidental_death, fill = sex )) +
     geom_bar(position = "dodge", stat="identity") +
-    scale_y_continuous(labels = scales::percent_format(accuracy = 1), name = "percent of deaths from accidental causes", limit = c(0,NA))  +
-    ggtitle("Percent of accidental deaths in 2017") +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1), name = "percent of deaths from external causes", limit = c(0,NA))  +
+    ggtitle("Percent of deaths") +
     theme_minimal()  
 
 ```
@@ -730,10 +727,10 @@ accidental_death %>%
   filter( age_group == "0-24") %>%
   ggplot( aes( x = year, y = percent_accidental_death, color = sex )) +
     geom_line() +
-    ggtitle("Percent of accident deaths in the 0-24 age group") +
+    ggtitle("Percent of deaths from external causes in the 0-24 age group") +
     theme_minimal()  +
     scale_x_continuous(name = "year", limits = c(2009, 2020), breaks = 2009:2020, minor_breaks = NULL ) +
-    scale_y_continuous(labels = scales::percent_format(accuracy = 1), name = "percent of deaths from accidental causes", limit = c(0,NA))  +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1), name = "percent of deaths from external causes", limit = c(0,NA))  +
     geom_smooth( method = lm, se=FALSE, linetype="dotted")
   
 ```
@@ -774,7 +771,7 @@ government and mainstream media:
   
 * **Has the restrictions of freedom of movement impacted the death rate?**
 
-  **Yes**, the death rate on the 0-24 age group has decreased by 30% relatively to normal in 2020. This cannot be explained by a
+  **Yes**, the death rate on the 0-24 age group has decreased by 30% relatively to normal in 2020. However this decrease cannot be explained by a
   decrease of accidental mortality alone.
   
     
@@ -783,14 +780,14 @@ government and mainstream media:
   Yes and no.
   
   **Yes** if you look at excess death rate for the age group from 65 to 74 years, i.e. the risk of dying in 2020 compared to expectations.
+  There is no equivalent since the 1960s.
   
-  **No** if you look at absolute death rate number. 2020 is _at most_ 20% worse than a normal year. 
-  The risk of dying during 2020 is up to 20% higher than expected according to the age group. That means that instead of this risk being              
-  approximately 5% at 80 years, it was at 6% in 2020.  For a 40 year-old man, this risk is 0.118% instead of 0.111%.
+  **No** if you look at absolute death rate number. The absolute death rates of 2020 are close to the ones of 2010. That is, if there
+  were in 2010 the same number of deaths than in 2020 for the same population structure, this would be a normal year.
+  
+  2020 is _at most_ 20% worse than a normal year -- for the most affected age group. 
+  That means that instead of this risk being approximately 5% at 80 years, it was at 6% in 2020.For a 40 year-old man, this risk is 0.118% instead of 0.111%.
 
-  For comparison, the death rate of 2020 (i.e., the risk of dying during that year) is approximately the one of 2012. That is, if there
-  were in 2012 the same number of deaths than in 2020 for the same population structure, this would be a normal year.
-  
 
 This article also lets a few questions unanswered:
 
@@ -822,7 +819,7 @@ now clearly stand out from noise.
 
 A second learning of this article is to challenge the believe that the 85+ age group is the most affected by the COVID19 epidemic.
 In terms of absolute mortality, this is true that this group is the most affected. But this group is affected by _any_ epidemic
-or weather event. Crudely said, this age group dies anyway any time there is an exceptional event -- every second year or so.
+or weather condition. Crudely said, this age group dies anyway any time there is an exceptional event -- every second year or so.
 If you look at the relative increase of the death rate, the 85+ age group is twice less affected than the 75-74 one. If you look
 at the deviation from the expectation, we find that such deviation was still usual in 2010 where we have to look in the 1960s for
 the other age groups.
