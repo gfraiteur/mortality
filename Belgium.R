@@ -84,15 +84,16 @@ population_structure_by_age_group <-
 ### DEATH
 
 # Load death data
-death_2020_max_week <- 48
-if ( !file.exists("./data/DEMO_DEATH_OPEN_W48.txt")){
+death_2020_max_week <- 49
+death_filename  <- sprintf("./data/DEMO_DEATH_OPEN_W%d.txt", death_2020_max_week)
+if ( !file.exists(death_filename)){
   download.file("https://statbel.fgov.be/sites/default/files/files/opendata/deathday/DEMO_DEATH_OPEN.zip", "./data/DEMO_DEATH_OPEN.zip")
   setwd("data")
   unzip("DEMO_DEATH_OPEN.zip")
   setwd("..")
 }
 
-death <- read_delim("./data/DEMO_DEATH_OPEN_W48.txt", ";", escape_double = FALSE, trim_ws = TRUE)
+death <- read_delim(death_filename, ";", escape_double = FALSE, trim_ws = TRUE)
 death <- death[,c("CD_SEX","CD_AGEGROUP","NR_WEEK","MS_NUM_DEATH")]
 names(death) <- c("sex", "age_group", "week", "death_observed")
 death$sex[death$sex==1] <- "M"

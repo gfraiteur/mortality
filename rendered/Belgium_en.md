@@ -18,6 +18,13 @@ Gael Fraiteur
 
 ## Introduction
 
+The COVID19 has caused disruptions of our societies that have not been
+seen in Western Europe since World Ware II. However, it is still
+difficult to understand how exceptional this epidemic actually is
+compared to historic mortality data. Is it a once-in-a-century event, or
+does it repeat every ten years? This article attempts to shed some light
+on these questions.
+
 When discussing the effect of the COVID19 epidemic, Belgium is an
 interesting country to study for several reasons. First, it has the
 highest reported death rate from COVID19 in the world. Secondly,
@@ -26,11 +33,11 @@ mortality information every week with a delay of just 3 weeks. Last and
 not least, this is the country where the author grew up.
 
 Our approach is to compare the number of deaths in 2020 (for weeks 1 to
-48) with the number of deaths that would be *expected* based on the
-structure of the population on January 1st, 2020 and on the usual death
-rates. The difference between expectations and reality gives us a metric
-named *excess deaths* when it is positive, or *deaths deficit* when it
-is negative.
+49) with the number of deaths that would be *expected* based on the
+structure of the population on January 1<sup>st</sup>, 2020 and on the
+usual death rates. The difference between expectations and reality gives
+us a metric named *excess deaths* when it is positive, or *deaths
+deficit* when it is negative.
 
 We compare this metric with the number of deaths due to COVID as
 reported by Sciensano, and with historical death and mortality data.
@@ -61,7 +68,7 @@ The data were downloaded from the following sources:
   - Number of deaths: Statbel, [Number of deaths per day, sex, age,
     region, province,
     district](https://statbel.fgov.be/en/open-data/number-deaths-day-sex-district-age).
-    For 2020, this data is available until the 48-th week.
+    For 2020, this data is available until the 49<sup>th</sup> week.
 
   - Structure of population: Statbel, [Population by place of residence,
     nationality, marital status, age and
@@ -99,15 +106,17 @@ significant.
 
 Our model of yearly mortality is built in three steps:
 
-1.  The first input is the structure of the population the 1st of
-    January of each year between 2009 and 2020 (i.e. the number of
-    residents of a given age and sex alive on that day).
+1.  The first input is the structure of the population the
+    1<sup>st</sup> of January of each year between 2009 and 2020
+    (i.e. the number of residents of a given age and sex alive on that
+    day).
 
 2.  The second input is the mortality data for Belgium for the
     corresponding age, sex and year, i.e. the probability that a person
-    who was alive on January 1st morning would be dead on December 31st
-    evening. The expected number of deaths for a given group and year is
-    simply the product of the first input with the second input.
+    who was alive on January 1<sup>st</sup> morning would be dead on
+    December 31<sup>st</sup> evening. The expected number of deaths for
+    a given group and year is simply the product of the first input with
+    the second input.
 
 3.  We split the yearly data into weeks based on weekly historic death
     data.
@@ -117,7 +126,8 @@ Our model of yearly mortality is built in three steps:
 The first input of our model is the structure of the population
 published by Statbel (see data sources). The data set gives us the
 number of inhabitants of each sex who are alive and have a specific age
-on January 1st of a given year. This data is available since 2009.
+on January 1<sup>st</sup> of a given year. This data is available since
+2009.
 
 As you can see on the next graph, the number of people aged 65 years or
 more is increasing every year by approximately 34,000, a 1.6% growth.
@@ -153,180 +163,16 @@ observed number of deaths, summed from 2009 to 2019, don’t match
 exactly. This discrepancy is expected and its cause is not important. To
 cancel the discrepancy, we apply the following correction factors:
 
-<!--html_preserve-->
-
-
-<div id="rtglnbnnwo" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-
-<table class="gt_table">
-
-<thead class="gt_col_headings">
-
-<tr>
-
-<th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1">
-
-Age group
-
-</th>
-
-<th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">
-
-F
-
-</th>
-
-<th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">
-
-M
-
-</th>
-
-</tr>
-
-</thead>
-
-<tbody class="gt_table_body">
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-0-24
-
-</td>
-
-<td class="gt_row gt_right">
-
-100.1%
-
-</td>
-
-<td class="gt_row gt_right">
-
-99.5%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-25-44
-
-</td>
-
-<td class="gt_row gt_right">
-
-99.2%
-
-</td>
-
-<td class="gt_row gt_right">
-
-100.2%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-45-64
-
-</td>
-
-<td class="gt_row gt_right">
-
-100.0%
-
-</td>
-
-<td class="gt_row gt_right">
-
-100.0%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-65-74
-
-</td>
-
-<td class="gt_row gt_right">
-
-100.7%
-
-</td>
-
-<td class="gt_row gt_right">
-
-100.6%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-75-84
-
-</td>
-
-<td class="gt_row gt_right">
-
-99.3%
-
-</td>
-
-<td class="gt_row gt_right">
-
-100.0%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-85+
-
-</td>
-
-<td class="gt_row gt_right">
-
-102.0%
-
-</td>
-
-<td class="gt_row gt_right">
-
-102.7%
-
-</td>
-
-</tr>
-
-</tbody>
-
-</table>
-
-</div>
-
-<!--/html_preserve-->
+| Age group |         F |         M |
+| :-------- | --------: | --------: |
+| 0-24      | 1.0014182 | 0.9952485 |
+| 25-44     | 0.9919067 | 1.0024983 |
+| 45-64     | 0.9997398 | 1.0004118 |
+| 65-74     | 1.0073558 | 1.0064647 |
+| 75-84     | 0.9930490 | 1.0000072 |
+| 85+       | 1.0197549 | 1.0274520 |
+
+Correction factors
 
 The following graphs shows the resulting projections of number of deaths
 per year and age group.
@@ -382,20 +228,20 @@ To answer these questions, the cumulative excess mortality (i.e. the
 integral of the curve over time) is a better metric.
 
 The following graphs show the cumulative death, first starting from
-January 1st, 2009, and then zooming in on 2019-2020.
+January 1<sup>st</sup>, 2009, and then zooming in on 2019-2020.
 
 ![](Belgium_en_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->![](Belgium_en_files/figure-gfm/unnamed-chunk-10-2.png)<!-- -->
 
 Note that the initial value of the cumulative metric is arbitrary. Here,
-we chose that the zero point would be January 1st, 2009. Because our
-model is based on a linear regression over years, and because of the
-yearly fluctuations, we can expect that the zero point is crossed every
-second year.
+we chose that the zero point would be January 1<sup>st</sup>, 2009.
+Because our model is based on a linear regression over years, and
+because of the yearly fluctuations, we can expect that the zero point is
+crossed every second year.
 
-The second arbitrary zero is the one of January 1st, 2020. This one is
-the consequence of the calibration of our model with real data for the
-period from 2009 to 2019. It is important to understand how arbitrary
-this zero is.
+The second arbitrary zero is the one of January 1<sup>st</sup>, 2020.
+This one is the consequence of the calibration of our model with real
+data for the period from 2009 to 2019. It is important to understand how
+arbitrary this zero is.
 
 The cumulative maximal death deficit was observed on March 11th, 2020,
 with a value of 1868 (point represented in green in the graph above). So
@@ -406,494 +252,27 @@ choosing a different beginning of the comparison time window.
 ### Excess death rate by age group
 
 Taking this remark into account, we can now look at the increased death
-rate for the year 2020 (between weeks 1 and 48) for different age
+rate for the year 2020 (between weeks 1 and 49) for different age
 groups. The following table shows the difference in death rate during
 the studied period in absolute terms and in terms that are relative to
 the expected values for 2020.
 
-<!--html_preserve-->
-
-
-
-<div id="oanozujnxd" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-
-<table class="gt_table">
-
-<thead class="gt_col_headings">
-
-<tr>
-
-<th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1">
-
-Age group
-
-</th>
-
-<th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">
-
-Expected death rate
-
-</th>
-
-<th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">
-
-Actual death rate
-
-</th>
-
-<th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">
-
-Absolute excess death rate
-
-</th>
-
-<th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">
-
-Relative excess death rate
-
-</th>
-
-</tr>
-
-</thead>
-
-<tbody class="gt_table_body">
-
-<tr class="gt_group_heading_row">
-
-<td colspan="5" class="gt_group_heading">
-
-F
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-0-24
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.02%
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.01%
-
-</td>
-
-<td class="gt_row gt_right">
-
-−0.01%
-
-</td>
-
-<td class="gt_row gt_right">
-
-−34%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-25-44
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.04%
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.05%
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.00%
-
-</td>
-
-<td class="gt_row gt_right">
-
-4%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-45-64
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.30%
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.31%
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.00%
-
-</td>
-
-<td class="gt_row gt_right">
-
-1%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-65-74
-
-</td>
-
-<td class="gt_row gt_right">
-
-1.03%
-
-</td>
-
-<td class="gt_row gt_right">
-
-1.14%
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.11%
-
-</td>
-
-<td class="gt_row gt_right">
-
-10%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-75-84
-
-</td>
-
-<td class="gt_row gt_right">
-
-2.93%
-
-</td>
-
-<td class="gt_row gt_right">
-
-3.54%
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.61%
-
-</td>
-
-<td class="gt_row gt_right">
-
-21%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-85+
-
-</td>
-
-<td class="gt_row gt_right">
-
-12.60%
-
-</td>
-
-<td class="gt_row gt_right">
-
-14.24%
-
-</td>
-
-<td class="gt_row gt_right">
-
-1.64%
-
-</td>
-
-<td class="gt_row gt_right">
-
-13%
-
-</td>
-
-</tr>
-
-<tr class="gt_group_heading_row">
-
-<td colspan="5" class="gt_group_heading">
-
-M
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-0-24
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.03%
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.02%
-
-</td>
-
-<td class="gt_row gt_right">
-
-−0.01%
-
-</td>
-
-<td class="gt_row gt_right">
-
-−35%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-25-44
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.08%
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.09%
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.00%
-
-</td>
-
-<td class="gt_row gt_right">
-
-5%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-45-64
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.47%
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.52%
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.04%
-
-</td>
-
-<td class="gt_row gt_right">
-
-9%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-65-74
-
-</td>
-
-<td class="gt_row gt_right">
-
-1.80%
-
-</td>
-
-<td class="gt_row gt_right">
-
-2.02%
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.22%
-
-</td>
-
-<td class="gt_row gt_right">
-
-12%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-75-84
-
-</td>
-
-<td class="gt_row gt_right">
-
-4.54%
-
-</td>
-
-<td class="gt_row gt_right">
-
-5.42%
-
-</td>
-
-<td class="gt_row gt_right">
-
-0.89%
-
-</td>
-
-<td class="gt_row gt_right">
-
-20%
-
-</td>
-
-</tr>
-
-<tr>
-
-<td class="gt_row gt_left gt_stub">
-
-85+
-
-</td>
-
-<td class="gt_row gt_right">
-
-14.72%
-
-</td>
-
-<td class="gt_row gt_right">
-
-16.83%
-
-</td>
-
-<td class="gt_row gt_right">
-
-2.11%
-
-</td>
-
-<td class="gt_row gt_right">
-
-14%
-
-</td>
-
-</tr>
-
-</tbody>
-
-</table>
-
-</div>
-
-<!--/html_preserve-->
+| Age group | Sex | Expected death rate | Actual death rate | Absolute excess death rate | Relative excess death rate |
+| :-------- | :-- | :------------------ | :---------------- | :------------------------- | :------------------------- |
+| 0-24      | F   | 0.02%               | 0.01%             | \-0.007%                   | \-35%                      |
+| 0-24      | M   | 0.03%               | 0.02%             | \-0.011%                   | \-35%                      |
+| 25-44     | F   | 0.05%               | 0.05%             | 0.002%                     | 4%                         |
+| 25-44     | M   | 0.09%               | 0.09%             | 0.005%                     | 5%                         |
+| 45-64     | F   | 0.31%               | 0.31%             | 0.003%                     | 1%                         |
+| 45-64     | M   | 0.48%               | 0.53%             | 0.043%                     | 9%                         |
+| 65-74     | F   | 1.06%               | 1.17%             | 0.109%                     | 10%                        |
+| 65-74     | M   | 1.84%               | 2.07%             | 0.231%                     | 13%                        |
+| 75-84     | F   | 2.99%               | 3.63%             | 0.634%                     | 21%                        |
+| 75-84     | M   | 4.63%               | 5.54%             | 0.909%                     | 20%                        |
+| 85+       | F   | 12.88%              | 14.60%            | 1.712%                     | 13%                        |
+| 85+       | M   | 15.05%              | 17.22%            | 2.169%                     | 14%                        |
+
+Death rates by age group during week 1-49 of 2020
 
 The following graph shows the relative values only:
 
@@ -908,15 +287,12 @@ is the 75-84 one, with a risk of dying 20% higher than expected.
 
 ### Absolute death rate in historical context
 
-To give some context, here is the historic death rate since 2000
-compared to what was expected for 2020. By construction, all lines
-converge to 100% in 2020.
+To give some context, here is the historic death rate since 2008
+compared to what was *expected* for 2020. The dashed horizontal lines
+show the *actual* death rate in 2020. It can be seen on this graph that
+the death rates observed in 2020 would be typical for year 2012.
 
 ![](Belgium_en_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
-
-It can be seen on this graph that the death rates for the groups
-exhibiting the largest difference are ones that would be typical in
-2012.
 
 For more perspective, here the same graph starting from 1900 on a
 logarithmic vertical scale.
@@ -996,7 +372,7 @@ discussed is the death deficit after the spring peak.
 
 ### Death peak in August
 
-The number excess deaths during the heat wave of August 2020 was 1398.
+The number excess deaths during the heat wave of August 2020 was 1401.
 By comparison, the heat wave of July 2019 caused an excess death of 136:
 10 times less.
 
@@ -1023,7 +399,7 @@ This is more visible on the cumulative excess deaths graph
 
 ![](Belgium_en_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
 
-During the spring peak, the cumulative excess death was 8673. During the
+During the spring peak, the cumulative excess death was 8676. During the
 summer, before the August peak, the death deficit was 1105, that is,
 approximately 13% of people who died during of COVID19 during spring had
 their life shortened by less than 3 months.
@@ -1036,7 +412,7 @@ the number of COVID19 deaths.
 ![](Belgium_en_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
 
 The numbers are quite similar, except for the oldest age group where
-COVID19 deaths are 1663 (23%) higher than excess deaths. This means than
+COVID19 deaths are 1639 (22%) higher than excess deaths. This means than
 an approximate 20% of the people over 85 who died of COVID19 during 2020
 (or were diagnosed as such) would have died from another cause in the
 same period
@@ -1099,34 +475,45 @@ media:
   - **Has the restrictions of freedom of movement impacted the death
     rate?**
     
-    **Yes**, the death rate on the 0-24 age group has decreased by 30%
+    **Yes**, the death rate on the 0-24 age group has decreased by 35%
     relatively to normal in 2020. However this decrease cannot be
     explained by a decrease of accidental mortality alone.
 
-  - **Is the 2020 year exceptionally bad?**
+  - **How exceptional was year 2020 in terms of mortality?**
     
-    Yes and no.
+    By definition, an *exception* is an event that does not occur
+    frequently. Therefore, to assess the exceptionally of an event, we
+    to find a comparable precedent.
     
-    **Yes** if you look at excess death rate for the age group from 65
-    to 74 years, i.e. the risk of dying in 2020 compared to
-    expectations. There is no equivalent since the 1960s.
+    Whether we look at the *absolute* or *excess* death rate, we get a
+    different level of exceptionally.
     
-    **No** if you look at absolute death rate number. The absolute death
-    rates of 2020 are close to the ones of 2010. That is, if there were
-    in 2010 the same number of deaths than in 2020 for the same
-    population structure, this would be a normal year.
+    **Once in 50 years** if you look at excess death rate for the age
+    group from 65 to 74 years, i.e. the risk of dying in 2020 compared
+    to expectations. There is no equivalent of the excess death rate
+    since the 1960s.
     
-    2020 is *at most* 20% worse than a normal year – for the most
-    affected age group. That means that instead of this risk being
-    approximately 5% at 80 years, it was at 6% in 2020.For a 40 year-old
-    man, this risk is 0.118% instead of 0.111%.
+    **Once in 10 years** if you look at absolute death rate number. The
+    absolute death rates of 2020 are close to the ones of 2010. That is,
+    if there were in 2010 the same number of deaths than in 2020 for the
+    same population structure, this would be a normal year.
+    
+    2020 is *at most* 20% worse than a normal year. For people in the
+    most affected age group, the risk to dying of coronavirus in 2020
+    (*additionally* to normal risks), was 20% than the risk of dying
+    from another reason.
 
 This article also lets a few questions unanswered:
 
-  - **How to explain the 30% decrease of mortality in the 0-24 age
+  - **How to explain the 35% decrease of mortality in the 0-24 age
     group?**
     
     A decrease of accidental mortality is not a sufficient explanation.
+    This mortality deficit should be modeled and applied to the 25-45
+    age group, which is typically also subject to higher accidental
+    death. This would result in a higher death rate attributed to
+    COVID19 in this age group. The data analyzed here did not allow us
+    to perform sich analysis.
 
   - **How to explain the increased mortality during August 2020?**
     
@@ -1134,7 +521,24 @@ This article also lets a few questions unanswered:
     than during the one of July 2019. Temperatures were not
     significantly higher, therefore another explanation is necessary.
 
+Probably the most important question that article *cannot* answer is:
+**What would have been the mortality *without* the lockdowns?**
+Analyzing past mortality data in only one country certainly cannot
+answer this question. Lockdowns do not heal, but they help decreasing
+the mortality in two ways: first by avoiding the overload of the health
+system, secondly because the knowledge of the virus and its cures
+increase overtime
+
 ## Conclusion
+
+This article challenges the believe that the 85+ age group is the most
+affected by the COVID19 epidemic. In terms of absolute mortality, this
+is true that this group is the most affected. However, the mortality in
+this age group seems to be caused, much more than for any age group, by
+events that have a frequency of approximately one every second year, as
+opposed to events that occur yearly. If you look at the *relative*
+increase of the death rate, the 85+ age group is twice less affected
+than the 75-74 one.
 
 Perhaps the most striking conclusion is the paradox between the fact
 that, on one side, the death rate in 2020 was equivalent to the one
@@ -1142,25 +546,57 @@ around 2010 and, on the other side, there has not been a comparable
 year-to-year variation of death rate for the 65-84 age group until the
 1960s.
 
-What happened that a situation that would have been normal in 2010 now
-cause major disruptions of our societies?
+What happened that a death rate by age group that would have been normal
+in 2010 now cause major disruptions of our societies?
 
-Several psychological, sociological and technological explanations could
-be proposed, but they would be outside of the scope of an article
-focusing on analysis of mortality data only.
+An element of answer is that disruptions were imposed to prevent higher
+mortality, i.e. based on *expectations* of mortality and not based on
+historical data. It would be more fair to judge the efficiency of
+political action by the *avoided* mortality rather than by the actual
+mortality, which means that we would need to compare actual mortality
+with expected mortality for the COVID-19 epidemic in Belgium. It will
+not be possible to evaluate the impact of the lockdowns until the
+epidemic is completely finished. Until such analysis is possible, we can
+only reason based on actual mortality.
 
-What historic data can show is that both the death rate and the
-year-to-year deviation from the “normal” death rate have constantly
-decreased since the 1950s. Epidemic events that would have gone almost
-unnoticed a few decades ago now clearly stand out from noise.
+Historic data clearly shows both the death rate and the year-to-year
+deviation from the expected death rate  
+have constantly decreased since the 1950s. This constant reduction of
+risk may have major sociological, psychological and political
+implications. Rulers and politicians alike have instrumentalized fear
+for centuries to control populations, and instrumentalized victims to
+justify their oppressive policies and consolidation of power. With an
+increasingly lower tolerance to the risk of dying, the political
+opportunity to instrument epidemics is also growing. This effect is
+amplified by the simple fact that the number of older voters is growing
+and politicians have a record of implementing short-sighted strategies
+just to win more votes.
 
-A second learning of this article is to challenge the believe that the
-85+ age group is the most affected by the COVID19 epidemic. In terms of
-absolute mortality, this is true that this group is the most affected.
-But this group is affected by *any* epidemic or weather condition.
-Crudely said, this age group dies anyway any time there is an
-exceptional event – every second year or so. If you look at the relative
-increase of the death rate, the 85+ age group is twice less affected
-than the 75-74 one. If you look at the deviation from the expectation,
-we find that such deviation was still usual in 2010 where we have to
-look in the 1960s for the other age groups.
+We have seen that 2020 can be compared to 2010 in terms of absolute
+mortality. We should also compare 2020 to past years using other
+criteria: quality of life, actuation of civic rights, possibility to die
+in dignity, social justice, respect of the State of Law, freedom of
+speech, … When last did we see similar regressions in Belgium? We would
+probably need to look back to 1940-1945.
+
+Are we willing to live in wartime conditions to maintain a mortality
+under what would be acceptable just one or two decades ago? What it the
+acceptable risk? When should we stop accepting restrictions to live in
+the name of reducing risk?
+
+Once the COVID-19 epidemic will belong to the past, once will be able to
+estimate the real costs and benefits of the lockdowns, these questions
+will become unavoidable.
+
+It has been repeated *ad nauseam* that the economics must not prevail
+over human life. This oversimplified moral imperative has been used to
+justify the sacrifice of small businesses, students and other segments
+of the population, or the air transportation industry. It must be
+questioned. At least, the media should return it to a few mega companies
+in industries like food, oil, tobacco or pharmacy – to see if really
+still applies to everybody.
+
+The real question of 2020 is rather: should mere biological survival
+prevail over the possibility a fully human life, a human life with
+friends, family, sports, politics, arts, religion, … all the facets that
+make life really human.
