@@ -15,6 +15,7 @@ Gael Fraiteur
   - [Revisiting controversial
     questions](#revisiting-controversial-questions)
   - [Conclusion](#conclusion)
+  - [Related works](#related-works)
 
 ## Introduction
 
@@ -244,9 +245,9 @@ data for the period from 2009 to 2019. It is important to understand how
 arbitrary this zero is.
 
 The cumulative maximal death deficit was observed on March 11th, 2020,
-with a value of 1868 (point represented in green in the graph above). So
+with a value of 1801 (point represented in green in the graph above). So
 when comparing the expected cumulative mortality with the real
-cumulative mortality, a difference of 1868 can be obtained just by
+cumulative mortality, a difference of 1801 can be obtained just by
 choosing a different beginning of the comparison time window.
 
 ### Excess death rate by age group
@@ -259,18 +260,18 @@ the expected values for 2020.
 
 | Age group | Sex | Expected death rate | Actual death rate | Absolute excess death rate | Relative excess death rate |
 | :-------- | :-- | :------------------ | :---------------- | :------------------------- | :------------------------- |
-| 0-24      | F   | 0.02%               | 0.01%             | \-0.007%                   | \-35%                      |
+| 0-24      | F   | 0.02%               | 0.01%             | \-0.007%                   | \-34%                      |
 | 0-24      | M   | 0.03%               | 0.02%             | \-0.011%                   | \-35%                      |
 | 25-44     | F   | 0.05%               | 0.05%             | 0.002%                     | 4%                         |
-| 25-44     | M   | 0.09%               | 0.09%             | 0.005%                     | 5%                         |
+| 25-44     | M   | 0.09%               | 0.09%             | 0.005%                     | 6%                         |
 | 45-64     | F   | 0.31%               | 0.31%             | 0.003%                     | 1%                         |
 | 45-64     | M   | 0.48%               | 0.53%             | 0.043%                     | 9%                         |
 | 65-74     | F   | 1.06%               | 1.17%             | 0.109%                     | 10%                        |
-| 65-74     | M   | 1.84%               | 2.07%             | 0.231%                     | 13%                        |
-| 75-84     | F   | 2.99%               | 3.63%             | 0.634%                     | 21%                        |
-| 75-84     | M   | 4.63%               | 5.54%             | 0.909%                     | 20%                        |
-| 85+       | F   | 12.88%              | 14.60%            | 1.712%                     | 13%                        |
-| 85+       | M   | 15.05%              | 17.22%            | 2.169%                     | 14%                        |
+| 65-74     | M   | 1.84%               | 2.07%             | 0.230%                     | 13%                        |
+| 75-84     | F   | 2.99%               | 3.63%             | 0.635%                     | 21%                        |
+| 75-84     | M   | 4.64%               | 5.54%             | 0.906%                     | 20%                        |
+| 85+       | F   | 12.89%              | 14.60%            | 1.704%                     | 13%                        |
+| 85+       | M   | 15.05%              | 17.22%            | 2.170%                     | 14%                        |
 
 Death rates by age group during week 1-49 of 2020
 
@@ -372,8 +373,8 @@ discussed is the death deficit after the spring peak.
 
 ### Death peak in August
 
-The number excess deaths during the heat wave of August 2020 was 1401.
-By comparison, the heat wave of July 2019 caused an excess death of 136:
+The number excess deaths during the heat wave of August 2020 was 1383.
+By comparison, the heat wave of July 2019 caused an excess death of 170:
 10 times less.
 
 Can this be explained by exceptional temperatures? The following graphs
@@ -399,9 +400,9 @@ This is more visible on the cumulative excess deaths graph
 
 ![](Belgium_en_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
 
-During the spring peak, the cumulative excess death was 8676. During the
-summer, before the August peak, the death deficit was 1105, that is,
-approximately 13% of people who died during of COVID19 during spring had
+During the spring peak, the cumulative excess death was 8643. During the
+summer, before the August peak, the death deficit was 1074, that is,
+approximately 12% of people who died during of COVID19 during spring had
 their life shortened by less than 3 months.
 
 ### Comparision of number of deaths by age group
@@ -412,7 +413,7 @@ the number of COVID19 deaths.
 ![](Belgium_en_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
 
 The numbers are quite similar, except for the oldest age group where
-COVID19 deaths are 1639 (22%) higher than excess deaths. This means than
+COVID19 deaths are 1669 (22%) higher than excess deaths. This means than
 an approximate 20% of the people over 85 who died of COVID19 during 2020
 (or were diagnosed as such) would have died from another cause in the
 same period
@@ -467,7 +468,7 @@ media:
   - **Would a majority of people who died from COVID19 have died from
     another cause very soon?**
     
-    **No**. Approximately 13% of people who died during of COVID19 would
+    **No**. Approximately 12% of people who died during of COVID19 would
     have died less than 3 months from other causes. Based on death data,
     we cannot take any conclusion for a longer time period or for the
     people who died in autumn.
@@ -532,13 +533,9 @@ increase overtime
 ## Conclusion
 
 This article challenges the believe that the 85+ age group is the most
-affected by the COVID19 epidemic. In terms of absolute mortality, this
-is true that this group is the most affected. However, the mortality in
-this age group seems to be caused, much more than for any age group, by
-events that have a frequency of approximately one every second year, as
-opposed to events that occur yearly. If you look at the *relative*
-increase of the death rate, the 85+ age group is twice less affected
-than the 75-74 one.
+affected by the COVID19 epidemic. In terms of absolute mortality.
+However you look at the *relative* increase of the death rate, the 85+
+age group is twice less affected than the 75-74 one.
 
 Perhaps the most striking conclusion is the paradox between the fact
 that, on one side, the death rate in 2020 was equivalent to the one
@@ -547,37 +544,37 @@ year-to-year variation of death rate for the 65-84 age group until the
 1960s.
 
 What happened that a death rate by age group that would have been normal
-in 2010 now cause major disruptions of our societies?
+in 2010 now causes major disruptions of our societies?
 
-An element of answer is that disruptions were imposed to prevent higher
-mortality, i.e. based on *expectations* of mortality and not based on
-historical data. It would be more fair to judge the efficiency of
-political action by the *avoided* mortality rather than by the actual
-mortality, which means that we would need to compare actual mortality
-with expected mortality for the COVID-19 epidemic in Belgium. It will
-not be possible to evaluate the impact of the lockdowns until the
-epidemic is completely finished. Until such analysis is possible, we can
-only reason based on actual mortality.
+An element of answer is that disruptions were imposed, not based on real
+mortality numbers, but based on *expectations* of mortality in order to
+*prevent* higher mortality. It would be more fair to judge the
+efficiency of political action by the *avoided* mortality rather than by
+the actual mortality, which means that we would need to compare actual
+mortality with expected mortality for the COVID-19 epidemic in Belgium.
+It will not be possible to evaluate the impact of the lockdowns until
+the epidemic is completely finished. Until such analysis is possible, we
+can only reason based on actual mortality.
 
 Historic data clearly shows both the death rate and the year-to-year
-deviation from the expected death rate  
-have constantly decreased since the 1950s. This constant reduction of
-risk may have major sociological, psychological and political
-implications. Rulers and politicians alike have instrumentalized fear
-for centuries to control populations, and instrumentalized victims to
-justify their oppressive policies and consolidation of power. With an
-increasingly lower tolerance to the risk of dying, the political
-opportunity to instrument epidemics is also growing. This effect is
-amplified by the simple fact that the number of older voters is growing
-and politicians have a record of implementing short-sighted strategies
-just to win more votes.
+deviation from the expected death rate have constantly decreased since
+the 1950s. This constant reduction of risk may have major sociological,
+psychological and political implications. Rulers and politicians alike
+have instrumentalized fear for centuries in order to control
+populations, and instrumentalized victims in order to justify their
+oppressive policies and consolidation of power. With an increasingly
+lower tolerance to the risk of dying, the political opportunity to
+instrument epidemics is also growing. This effect is amplified by the
+simple fact that the number of older voters is increasing and
+politicians have a record of implementing short-sighted strategies just
+to win more votes.
 
 We have seen that 2020 can be compared to 2010 in terms of absolute
 mortality. We should also compare 2020 to past years using other
 criteria: quality of life, actuation of civic rights, possibility to die
 in dignity, social justice, respect of the State of Law, freedom of
-speech, … When last did we see similar regressions in Belgium? We would
-probably need to look back to 1940-1945.
+speech, … When was the last time when we saw similar regressions in
+Belgium? We would probably need to look back to 1940-1945.
 
 Are we willing to live in wartime conditions to maintain a mortality
 under what would be acceptable just one or two decades ago? What it the
@@ -591,12 +588,20 @@ will become unavoidable.
 It has been repeated *ad nauseam* that the economics must not prevail
 over human life. This oversimplified moral imperative has been used to
 justify the sacrifice of small businesses, students and other segments
-of the population, or the air transportation industry. It must be
-questioned. At least, the media should return it to a few mega companies
-in industries like food, oil, tobacco or pharmacy – to see if really
-still applies to everybody.
+of the population, or the air transportation industry. This motto must
+be questioned. At least, the media should return it to a few mega
+companies in industries like food, oil, tobacco or pharmacy – to see if
+really still applies to everybody.
 
 The real question of 2020 is rather: should mere biological survival
 prevail over the possibility a fully human life, a human life with
 friends, family, sports, politics, arts, religion, … all the facets that
 make life really human.
+
+## Related works
+
+  - Scientific Directorate of Epidemiology and public health, [All-cause
+    mortality supports the COVID-19 mortality in Belgium and comparison
+    with major fatal events of the last
+    century](https://archpublichealth.biomedcentral.com/articles/10.1186/s13690-020-00496-x)
+    (covers only March-June 2020)

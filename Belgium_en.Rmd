@@ -1,18 +1,23 @@
 ---
-title: "Analysis of Belgian mortality data in 2020"
+title: "An analysis of excess mortality in 2020 in Belgium"
 author: "Gael Fraiteur"
 output:
+  word_document:
+    toc: yes
+    toc_depth: '2'
   github_document:
-    toc: true
-    toc_depth: 2
-    fig_width: 12 
-    fig_height: 6 
-    html_preview: false 
-  html_document:
-    
     toc: yes
     toc_depth: 2
-    fig_width: 9 
+    fig_width: 12
+    fig_height: 6
+    html_preview: no
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+  html_document:
+    toc: yes
+    toc_depth: 2
+    fig_width: 9
     fig_height: 6
 ---
 
@@ -52,10 +57,9 @@ or if you have found a bug or inaccuracy, please open an issue on GitHub or, bet
 
 ## About the author
 
-Gael Fraiteur graduated from the Louvain School of Engineering in 2001 as a civil engineer in applied mathematics. He has worked
-since then in the software industry. In 2004, he started an open-source project named PostSharp. In 2009, he founded a company
-to market and develop the product. As the CEO and principal engineer of PostSharp Technologies, Gael now shares his time between R&D, 
-management and marketing. 
+Gael Fraiteur graduated from the Louvain School of Engineering in 2001 as a civil engineer in applied mathematics. He also holds two minor degrees
+in philosophy from UCLouvain. He has worked since then in the software industry. In 2004, he started an open-source project named PostSharp. In 2009, he founded a company
+to market and develop the product. As the CEO and principal engineer of PostSharp Technologies, the author now shares his time between R&D, management and marketing. 
 
 
 ## Data sources
@@ -238,18 +242,18 @@ death_expected_yearly %>%
 ```
 
 
-### Splitting years into weeks
+### 3. Splitting years into weeks
 
-We now have a yearly model, but we need weekly projections. For our weekly model, we first compute the percent of deaths,
-for each age group, that happens in a given week of the year, and we multiply this coefficient with the yearly death rate for this
-year. Note that we didn't compute a different coefficient for each sex because the data is already noisy enough, especially
-for younger age groups.
+We now have a yearly model, but we need weekly projections. For our weekly model, we first compute, for each sex and age group, the percent of deaths
+that happens in a given week of the year, and we multiply this coefficient with the yearly death rate for this
+year. Note that we applied a 3-week centered rolling mean to the data series before aggregating per week of year.
 
 
 ```{r}
 
 death_per_week_of_year %>% 
-  group_by(week_of_year) %>% 
+  group_by(week_of_year, age_group) %>% 
+  summarise( week_death_percent = mean(week_death_percent) ) %>%
   ggplot( aes( x = week_of_year, y = week_death_percent)) + 
   geom_line(aes(color=age_group)) + 
   ggtitle("Distribution of deaths per week") +
@@ -484,7 +488,7 @@ For more perspective, here the same graph starting from 1900 on a logarithmic ve
 compared_mortality_for_graph %>%
   filter( year >= 1900 ) %>%
    ggplot( aes( x = year, y = mortality_compared_2020, color = age_group) ) +
-    geom_point() +
+    geom_point( size = 1 ) +
   scale_color_discrete() +
   scale_x_continuous(name = "year", breaks = seq(1900,2020,10)) +
   scale_y_log10(labels = scales::percent_format(accuracy=1), name = "death rate relatively to 2020 normal", breaks = 10 ^ seq(0,2,0.2), limit = c(1,100))  +
@@ -514,7 +518,7 @@ mortality_deviation_max_year <- 2020
 mortality_deviation %>%
   filter(year>=mortality_deviation_min_year & deviation > 0 ) %>%
   ggplot( aes( x = year, y = deviation, color = age_group ) ) +
-    geom_point(aes( shape = sex )) +
+    geom_point(aes( shape = sex ), size = 1 ) +
     scale_y_log10(labels = scales::percent_format(accuracy=0.001), name = "deviation", breaks = c( 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 1e1))  +
     scale_x_continuous(name = "year", limits = c(mortality_deviation_min_year, mortality_deviation_max_year), 
                        breaks =  seq(mortality_deviation_min_year, mortality_deviation_max_year, 10), minor_breaks = NULL )  +
@@ -632,7 +636,7 @@ weather %>%
   summarise( air_temperature = max(air_temperature_max) ) %>%
   ungroup() %>%
   ggplot( aes( x = date, y = air_temperature ) ) +
-      geom_point(aes(),alpha=0.1)+
+      geom_point(aes(),alpha=0.1, size = 1 )+
       geom_line(aes(y=rollmeanr(air_temperature, 7, na.pad=TRUE)),color = "blue")+
       geom_line(aes(y=rollmeanr(air_temperature, 30, na.pad=TRUE)),color = "red")+
       ggtitle("Maximum daily temperatures and 7-day and 30-day moving averages") +
@@ -737,7 +741,7 @@ accidental_death %>%
   ggplot( aes( x = age_group, y = percent_accidental_death, fill = sex )) +
     geom_bar(position = "dodge", stat="identity") +
     scale_y_continuous(labels = scales::percent_format(accuracy = 1), name = "percent of deaths from external causes", limit = c(0,NA))  +
-    ggtitle("Percent of deaths") +
+    ggtitle("Percent of deaths from external causes") +
     this_theme()  
 
 ```
@@ -835,33 +839,30 @@ in two ways: first by avoiding the overload of the health system, secondly becau
 ## Conclusion
 
 This article challenges the believe that the 85+ age group is the most affected by the COVID19 epidemic.
-In terms of absolute mortality, this is true that this group is the most affected. However, the mortality in this age group seems to be caused,
-much more than for any age group, by events that have a frequency of approximately one every second year, as opposed to events that occur yearly.
-If you look at the _relative_ increase of the death rate, the 85+ age group is twice less affected than the 75-74 one. 
+In terms of absolute mortality. However you look at the _relative_ increase of the death rate, the 85+ age group is twice less affected than the 75-74 one. 
 
 Perhaps the most striking conclusion is the paradox between the fact that, on one side,
 the death rate in 2020 was equivalent to the one around 2010 and, on the other side, there has not been a comparable
 year-to-year variation of death rate for the 65-84 age group until the 1960s.
 
-What happened that a death rate by age group that would have been normal in 2010 now cause major disruptions of our societies?
+What happened that a death rate by age group that would have been normal in 2010 now causes major disruptions of our societies?
 
-An element of answer is that disruptions were imposed to prevent higher mortality, i.e. based on _expectations_ of mortality and not based on
-historical data. It would be more fair to judge the efficiency of political action by the _avoided_ mortality rather than by the actual mortality,
+An element of answer is that disruptions were imposed, not based on real mortality numbers, but based on _expectations_ of mortality in order 
+to _prevent_ higher mortality. It would be more fair to judge the efficiency of political action by the _avoided_ mortality rather than by the actual mortality,
 which means that we would need to compare actual mortality with expected mortality for the COVID-19 epidemic in Belgium. It will not be possible
 to evaluate the impact of the lockdowns until the epidemic is completely finished. Until such analysis is possible, we can only reason based
 on actual mortality.
 
 
-Historic data clearly shows both the death rate and the year-to-year deviation from the expected death rate  
-have constantly decreased since the 1950s. This constant reduction of risk may have major sociological, psychological and political
-implications. Rulers and politicians alike have instrumentalized fear for centuries to control populations,
-and instrumentalized victims to justify their oppressive policies and consolidation of power. With an increasingly lower tolerance to the risk of dying, 
-the political opportunity to instrument epidemics is also growing. This effect is amplified by the simple fact that the number of older
-voters is growing and politicians have a record of implementing short-sighted strategies just to win more votes.
+Historic data clearly shows both the death rate and the year-to-year deviation from the expected death rate have constantly decreased since the 1950s. 
+This constant reduction of risk may have major sociological, psychological and political implications. Rulers and politicians alike have instrumentalized fear 
+for centuries in order to control populations, and instrumentalized victims in order to justify their oppressive policies and consolidation of power. With an increasingly lower 
+tolerance to the risk of dying, the political opportunity to instrument epidemics is also growing. This effect is amplified by the simple fact that the number 
+of older voters is increasing and politicians have a record of implementing short-sighted strategies just to win more votes.
 
 We have seen that 2020 can be compared to 2010 in terms of absolute mortality. We should also compare 2020 to past years using
 other criteria: quality of life, actuation of civic rights, possibility to die in dignity, social justice, respect of the State of Law,
-freedom of speech, ... When last did we see similar regressions in Belgium? We would probably need to look back to 1940-1945. 
+freedom of speech, ... When was the last time when we saw similar regressions in Belgium? We would probably need to look back to 1940-1945. 
 
 Are we willing to live in wartime conditions to maintain a mortality under what would be acceptable just one or two decades ago? What it the
 acceptable risk? When should we stop accepting restrictions to live in the name of reducing risk?
@@ -869,7 +870,7 @@ acceptable risk? When should we stop accepting restrictions to live in the name 
 Once the COVID-19 epidemic will belong to the past, once will be able to estimate the real costs and benefits of the lockdowns, these questions will become unavoidable. 
 
 It has been repeated _ad nauseam_ that the economics must not prevail over human life. This oversimplified moral imperative has been used to justify the sacrifice
-of small businesses, students and other segments of the population, or the air transportation industry. It must be questioned. At least, the media should return
+of small businesses, students and other segments of the population, or the air transportation industry. This motto must be questioned. At least, the media should return
 it to a few mega companies in industries like food, oil, tobacco or pharmacy -- to see if really still applies to everybody.
 
 The real question of 2020 is rather: should mere biological survival prevail over the possibility a fully human life, a human
@@ -877,3 +878,6 @@ life with friends, family, sports, politics, arts, religion, ... all the facets 
 
 
 
+## Related works
+
+* Scientific Directorate of Epidemiology and public health, [All-cause mortality supports the COVID-19 mortality in Belgium and comparison with major fatal events of the last century](https://archpublichealth.biomedcentral.com/articles/10.1186/s13690-020-00496-x) (covers only March-June 2020)

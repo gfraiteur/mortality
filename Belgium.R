@@ -98,6 +98,7 @@ death <- death[,c("CD_SEX","CD_AGEGROUP","NR_WEEK","MS_NUM_DEATH")]
 names(death) <- c("sex", "age_group", "week", "death_observed")
 death$sex[death$sex==1] <- "M"
 death$sex[death$sex==2] <- "F"
+death <- death %>% complete( sex, age_group, week, fill = list(death_observed = 0)  )
 death <- death %>%
   group_by( sex, age_group, week ) %>% 
   summarise( death_observed = sum(death_observed)) %>%
@@ -110,14 +111,16 @@ death_yearly <- death %>% group_by( sex, age_group, year ) %>% summarise( death_
 # Compute the histogram of deaths per week excluding year 2020. 
 # This model is over-fitted if we try to match every week, so we won't group by sex.
 death_per_week_of_year <- death %>% 
-  filter(year <= 2019)  %>%
-  group_by( age_group, week_of_year ) %>% 
-  summarise( death_observed_yearly = sum(death_observed)) %>%
+  group_by( age_group, sex ) %>% 
+  arrange( age_group, sex, date ) %>%
+  mutate( death_observed_rollmean = rollmean(death_observed, 3, fill = NA)) %>%
+  filter(  year <= 2019)  %>%
+  group_by( age_group, sex, week_of_year ) %>%
+  summarise( 
+    avg_death_in_week_of_year = mean(death_observed_rollmean, na.rm = TRUE) ) %>%
   ungroup() %>%
-  group_by( age_group ) %>% 
-  mutate( total_death_count = sum(death_observed_yearly)) %>%
-  group_by( week_of_year, add=TRUE ) %>% 
-  mutate( week_death_percent = death_observed_yearly / total_death_count )
+  group_by( age_group, sex ) %>%
+  mutate( week_death_percent = avg_death_in_week_of_year / sum(avg_death_in_week_of_year)  )
 
 
 
@@ -183,12 +186,12 @@ covid_death <-covid_death %>%
 ### TEMPERATURES
 
 # https://opendata.meteo.be/geonetwork/srv/eng/catalog.search;jsessionid=B123D8FF9D843F6B8721B8878EB55479#/metadata/RMI_DATASET_AWS_1DAY
-if ( !file.exists("./data/weathe.cscr")){
+if ( !file.exists("./data/weather.csv")){
  download.file("https://opendata.meteo.be/service/aws/wfs?request=GetFeature&service=WFS&version=1.1.0&typeName=aws:aws_1day&outputFormat=csv", 
                "./data/weather.csv")
 }
 
-weather <- read_csv("data/weather.csv", col_types = cols(FID = col_skip(), 
+weather <- read_csv("./data/weather.csv", col_types = cols(FID = col_skip(), 
                                                          the_geom = col_skip(),
                                                          qc_flags = col_skip()))
 
@@ -285,7 +288,7 @@ death_expected_yearly <- death_expected_yearly %>% select(-death_expected_raw) %
 # Compute expected number of death per week
 death_expected_weekly <- death %>% 
      merge( death_expected_yearly, by = c("year", "age_group", "sex")) %>%
-     merge( death_per_week_of_year[,c("week_of_year", "age_group", "week_death_percent")], by = c("week_of_year", "age_group"))
+     merge( death_per_week_of_year[,c("week_of_year", "age_group", "week_death_percent", "sex")], by = c("week_of_year", "age_group", "sex")) 
 death_expected_weekly$death_expected = with(death_expected_weekly, death_expected_yearly * week_death_percent)
 death_expected_weekly <- death_expected_weekly %>%
   select(-week_death_percent) %>%
