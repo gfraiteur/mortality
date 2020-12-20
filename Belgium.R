@@ -148,15 +148,18 @@ rm(mortality_male)
 mortality$mortality <- as.double(mortality$mortality)
 mortality$age <- as.double(mortality$age)  # This will convert 110+ to N/A
 
-mortality <- na.omit(mortality) # This removes N/A
-
-mortality <- merge( mortality, age, by = c("age"))
-
-mortality_all <- mortality
-
-mortality <- filter( mortality, year >= 2009 )
 
 
+mortality <- 
+  mortality %>%
+  filter ( year < 1914 | year > 1918 ) %>%
+  arrange( age, sex, year ) %>%
+  group_by( age, sex ) %>%
+  mutate( mortality_fixed = na.approx( mortality, na.rm = FALSE ))
+  
+
+
+mortality <- merge( mortality, age, by = c("age")) 
 
 
 ### COVID DEATH
@@ -249,6 +252,7 @@ accidental_death <-
 
 # Compute a liner regression for each age and sex
 mortality_lr_coefficients <- transpose( data.frame(  mortality %>% 
+                                                       filter( year >= 2009 ) %>%
                                                        group_by(sex, age) %>%
                                                        group_map( ~ c( .y$sex, .y$age, summary(lm( mortality ~ year, data = .x ))$coefficients[,1]) )))
 
@@ -386,7 +390,7 @@ accidental_death_2020 <-
 ### MORTALITY VARIANCE
 
 mortality_deviation <-
-  mortality_all %>%
+  mortality %>%
     group_by( year, sex, age_group ) %>%
     summarise( mortality = mean(mortality)) %>%
     group_by( sex, age_group ) %>%

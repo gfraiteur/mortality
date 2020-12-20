@@ -1,4 +1,4 @@
-Analysis of Belgian mortality data in 2020
+An analysis of excess mortality in 2020 in Belgium
 ================
 Gael Fraiteur
 
@@ -56,11 +56,12 @@ please open an issue on GitHub or, better, submit a pull request.
 ## About the author
 
 Gael Fraiteur graduated from the Louvain School of Engineering in 2001
-as a civil engineer in applied mathematics. He has worked since then in
-the software industry. In 2004, he started an open-source project named
+as a civil engineer in applied mathematics. He also holds two minor
+degrees in philosophy from UCLouvain. He has worked since then in the
+software industry. In 2004, he started an open-source project named
 PostSharp. In 2009, he founded a company to market and develop the
 product. As the CEO and principal engineer of PostSharp Technologies,
-Gael now shares his time between R\&D, management and marketing.
+the author now shares his time between R\&D, management and marketing.
 
 ## Data sources
 
@@ -149,12 +150,12 @@ groups, which seems to mean that these age groups are more sensitive to
 events that happen less than once a year, such as epidemics or
 exceptional weather.
 
-![](Belgium_en_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+![](Belgium_en_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->![](Belgium_en_files/figure-gfm/unnamed-chunk-3-2.png)<!-- -->
 
 We model the death rate with a linear regression for each age and sex.
-This model allows us to extrapolate the data to 2019 and 2020, but it
-also removes the year-to-year variations for all previous years. That
-is, this death rate model removes the effect of epidemics and weather
+This model allows us to extrapolate the data to 2019 and 2020, and
+removes the year-to-year variations for all previous years. That is,
+this death rate model removes the effect of epidemics and weather
 conditions that happen less frequently than yearly.
 
 Once we have a death rate model for each group and year, we multiply
@@ -184,14 +185,14 @@ Let’s now compare the projections with the reality:
 
 ![](Belgium_en_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
-### Splitting years into weeks
+### 3\. Splitting years into weeks
 
 We now have a yearly model, but we need weekly projections. For our
-weekly model, we first compute the percent of deaths, for each age
-group, that happens in a given week of the year, and we multiply this
+weekly model, we first compute, for each sex and age group, the percent
+of deaths that happens in a given week of the year, and we multiply this
 coefficient with the yearly death rate for this year. Note that we
-didn’t compute a different coefficient for each sex because the data
-is already noisy enough, especially for younger age groups.
+applied a 3-week centered rolling mean to the data series before
+aggregating per week of year.
 
 ![](Belgium_en_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
@@ -245,9 +246,9 @@ data for the period from 2009 to 2019. It is important to understand how
 arbitrary this zero is.
 
 The cumulative maximal death deficit was observed on March 11th, 2020,
-with a value of 1801 (point represented in green in the graph above). So
+with a value of 1873 (point represented in green in the graph above). So
 when comparing the expected cumulative mortality with the real
-cumulative mortality, a difference of 1801 can be obtained just by
+cumulative mortality, a difference of 1873 can be obtained just by
 choosing a different beginning of the comparison time window.
 
 ### Excess death rate by age group
@@ -260,18 +261,18 @@ the expected values for 2020.
 
 | Age group | Sex | Expected death rate | Actual death rate | Absolute excess death rate | Relative excess death rate |
 | :-------- | :-- | :------------------ | :---------------- | :------------------------- | :------------------------- |
-| 0-24      | F   | 0.02%               | 0.01%             | \-0.007%                   | \-34%                      |
-| 0-24      | M   | 0.03%               | 0.02%             | \-0.011%                   | \-35%                      |
+| 0-24      | F   | 0.02%               | 0.01%             | \-0.008%                   | \-37%                      |
+| 0-24      | M   | 0.03%               | 0.02%             | \-0.012%                   | \-37%                      |
 | 25-44     | F   | 0.05%               | 0.05%             | 0.002%                     | 4%                         |
 | 25-44     | M   | 0.09%               | 0.09%             | 0.005%                     | 6%                         |
 | 45-64     | F   | 0.31%               | 0.31%             | 0.003%                     | 1%                         |
 | 45-64     | M   | 0.48%               | 0.53%             | 0.043%                     | 9%                         |
 | 65-74     | F   | 1.06%               | 1.17%             | 0.109%                     | 10%                        |
-| 65-74     | M   | 1.84%               | 2.07%             | 0.230%                     | 13%                        |
+| 65-74     | M   | 1.84%               | 2.07%             | 0.231%                     | 13%                        |
 | 75-84     | F   | 2.99%               | 3.63%             | 0.635%                     | 21%                        |
-| 75-84     | M   | 4.64%               | 5.54%             | 0.906%                     | 20%                        |
-| 85+       | F   | 12.89%              | 14.60%            | 1.704%                     | 13%                        |
-| 85+       | M   | 15.05%              | 17.22%            | 2.170%                     | 14%                        |
+| 75-84     | M   | 4.64%               | 5.54%             | 0.907%                     | 20%                        |
+| 85+       | F   | 12.89%              | 14.60%            | 1.708%                     | 13%                        |
+| 85+       | M   | 15.04%              | 17.22%            | 2.176%                     | 14%                        |
 
 Death rates by age group during week 1-49 of 2020
 
@@ -280,7 +281,7 @@ The following graph shows the relative values only:
 ![](Belgium_en_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 As you can see, the age group whose death rate is the most different in
-2020 than the expectation is the younger one, which had 35% less risk to
+2020 than the expectation is the younger one, which had 37% less risk to
 die in 2020 than in another year. We will come back to this number.
 
 The age group whose death rate is the most negatively affected in 2020
@@ -373,8 +374,8 @@ discussed is the death deficit after the spring peak.
 
 ### Death peak in August
 
-The number excess deaths during the heat wave of August 2020 was 1383.
-By comparison, the heat wave of July 2019 caused an excess death of 170:
+The number excess deaths during the heat wave of August 2020 was 1407.
+By comparison, the heat wave of July 2019 caused an excess death of 155:
 10 times less.
 
 Can this be explained by exceptional temperatures? The following graphs
@@ -400,8 +401,8 @@ This is more visible on the cumulative excess deaths graph
 
 ![](Belgium_en_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
 
-During the spring peak, the cumulative excess death was 8643. During the
-summer, before the August peak, the death deficit was 1074, that is,
+During the spring peak, the cumulative excess death was 8674. During the
+summer, before the August peak, the death deficit was 1078, that is,
 approximately 12% of people who died during of COVID19 during spring had
 their life shortened by less than 3 months.
 
@@ -413,14 +414,14 @@ the number of COVID19 deaths.
 ![](Belgium_en_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
 
 The numbers are quite similar, except for the oldest age group where
-COVID19 deaths are 1669 (22%) higher than excess deaths. This means than
+COVID19 deaths are 1633 (22%) higher than excess deaths. This means than
 an approximate 20% of the people over 85 who died of COVID19 during 2020
 (or were diagnosed as such) would have died from another cause in the
 same period
 
 ## Decreased death rate of the youngest age group
 
-The death rate of the 0-24 age group is 35% lower in 2020 than expected.
+The death rate of the 0-24 age group is 37% lower in 2020 than expected.
 How can we explain this significant difference? Intuitively, this could
 be explained by the lower exposure to risk of accidents. Let’s test this
 hypothesis based on the *Causes of death by month, sex, age group and
@@ -589,7 +590,7 @@ It has been repeated *ad nauseam* that the economics must not prevail
 over human life. This oversimplified moral imperative has been used to
 justify the sacrifice of small businesses, students and other segments
 of the population, or the air transportation industry. This motto must
-be questioned. At least, the media should return it to a few mega
+be questioned. At least, the media should return it to a few big
 companies in industries like food, oil, tobacco or pharmacy – to see if
 really still applies to everybody.
 

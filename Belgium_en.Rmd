@@ -2,23 +2,23 @@
 title: "An analysis of excess mortality in 2020 in Belgium"
 author: "Gael Fraiteur"
 output:
-  word_document:
-    toc: yes
-    toc_depth: '2'
   github_document:
     toc: yes
     toc_depth: 2
     fig_width: 12
     fig_height: 6
     html_preview: no
-  pdf_document:
-    toc: yes
-    toc_depth: '2'
   html_document:
     toc: yes
     toc_depth: 2
     fig_width: 9
     fig_height: 6
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+  word_document:
+    toc: yes
+    toc_depth: '2'
 ---
 
 ```{r setup, include=FALSE}
@@ -171,13 +171,15 @@ or exceptional weather.
 ```{r}
 
 mortality_for_graph <- mortality %>%
-  filter( age %in% c( 65, 75, 85, 90, 95, 100)  )  %>%
+  filter( year >= 2009 & age %in% seq( 10, 100, 10)  )  %>%
   group_by( age, year ) %>%
-  summarise( mortality = mean(mortality))
+  summarise( mortality = mean(mortality)) %>%
+  mutate( is_old = age >= 50 )
   
 mortality_for_graph$age <- as.factor(mortality_for_graph$age)
 
 mortality_for_graph %>%
+  filter( is_old == TRUE ) %>%
    ggplot( aes( x = year, y = mortality, color = age) ) +
     geom_line() +
   scale_color_discrete() +
@@ -185,12 +187,23 @@ mortality_for_graph %>%
   scale_y_continuous(labels = scales::percent_format(accuracy = 1), name = "death rate")  +
   geom_smooth( method='lm', se = FALSE, linetype="dotted", weight=1) +
   this_theme() +
-  ggtitle("death rate for different ages in 2009-2018")
+  ggtitle("Death rate for different ages over 50 in 2009-2018")
+
+mortality_for_graph %>%
+  filter( is_old == FALSE ) %>%
+   ggplot( aes( x = year, y = mortality, color = age) ) +
+    geom_line() +
+  scale_color_discrete() +
+  scale_x_continuous(name = "year") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 0.01), name = "death rate", limits = c(0,NA))  +
+  geom_smooth( method='lm', se = FALSE, linetype="dotted", weight=1) +
+  this_theme() +
+  ggtitle("Death rate for different ages under 50 in 2009-2018")
 
 ```
 
 We model the death rate with a linear regression for each age and sex. This model allows us to extrapolate
-the data to 2019 and 2020, but it also removes the year-to-year variations for all previous years. That is, this
+the data to 2019 and 2020, and removes the year-to-year variations for all previous years. That is, this
 death rate model removes the effect of epidemics and weather conditions that happen less frequently than yearly.
 
 Once we have a death rate model for each group and year, we multiply this coefficient by the actual
@@ -444,7 +457,7 @@ mortality_in_2020 <- mortality_in_2020 %>% select( -year, -intercept )
 
 
 mortality_compared_2020 <-
-  merge( complete( mortality_all, sex, year, age ), mortality_in_2020, by = c("age", "sex" ))
+  merge( complete( mortality, sex, year, age ), mortality_in_2020, by = c("age", "sex" ))
   
 mortality_compared_2020$compared_mortality = mortality_compared_2020$mortality / mortality_compared_2020$mortality_2020
 
@@ -871,7 +884,7 @@ Once the COVID-19 epidemic will belong to the past, once will be able to estimat
 
 It has been repeated _ad nauseam_ that the economics must not prevail over human life. This oversimplified moral imperative has been used to justify the sacrifice
 of small businesses, students and other segments of the population, or the air transportation industry. This motto must be questioned. At least, the media should return
-it to a few mega companies in industries like food, oil, tobacco or pharmacy -- to see if really still applies to everybody.
+it to a few big companies in industries like food, oil, tobacco or pharmacy -- to see if really still applies to everybody.
 
 The real question of 2020 is rather: should mere biological survival prevail over the possibility a fully human life, a human
 life with friends, family, sports, politics, arts, religion, ... all the facets that make life really human.
