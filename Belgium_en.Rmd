@@ -835,11 +835,11 @@ This article also lets a few questions unanswered:
 
   A decrease of accidental mortality is not a sufficient explanation. This mortality deficit should be modeled and applied to the 25-45 age group,
   which is typically also subject to higher accidental death. This would result in a higher death rate attributed to COVID19 in this age group.
-  The data analyzed here did not allow us to perform sich analysis.
+  The data analyzed here did not allow us to perform such analysis.
 
 * **How to explain the increased mortality during August 2020?**
   
-  The mortality was 10 times higher during the heat peak of July 2020 than during the one of July 2019. Temperatures
+  The mortality was 10 times higher during the heat peak of July 2019 than during the one of July 2019. Temperatures
   were not significantly higher, therefore another explanation is necessary. 
   
 
