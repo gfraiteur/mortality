@@ -33,22 +33,20 @@ age <- sqldf( "select age, age_group from age, age_group where age.age between a
 
 ### POPULATION STRUCTURE
 
-# Load population_structure structure
+# Load the population structure. The state is given for January 1st of each year.
 if ( exists("population_structure"))  {
   rm(population_structure)
 }
 for ( year in 2009:2020 ) {
   message("Loading year ", year)
-  filename <- sprintf("./data/TF_SOC_POP_STRUCT_%d.txt", year)
+  filename <- sprintf("./data/Belgium/TF_SOC_POP_STRUCT_%d.txt", year)
   if ( !file.exists(filename)) {
-    zipfilename <- sprintf("./data/TF_SOC_POP_STRUCT_%d.zip", year)
+    zipfilename <- sprintf("./data/Belgium/TF_SOC_POP_STRUCT_%d.zip", year)
     if ( !file.exists(zipfilename)) {
-      url <- sprintf("https://statbel.fgov.be/sites/default/files/files/opendata/bevolking naar woonplaats, nationaliteit burgelijke staat , leeftijd en geslacht/TF_SOC_POP_STRUCT_%d.zip", year)
+      url <- sprintf("https://statbel.fgov.be/sites/default/files/files/opendata/Belgium/bevolking naar woonplaats, nationaliteit burgelijke staat , leeftijd en geslacht/TF_SOC_POP_STRUCT_%d.zip", year)
       download.file(url, zipfilename)
     }
-    setwd("data")
-    unzip(zipfilename)
-    setwd("..")
+    unzip(zipfilename, exdir = "./data/Belgium")
   }
   
   separator <- if ( year == 2020 ) { ";" } else { "|" }
@@ -85,12 +83,10 @@ population_structure_by_age_group <-
 
 # Load death data
 death_2020_max_week <- 49
-death_filename  <- sprintf("./data/DEMO_DEATH_OPEN_W%d.txt", death_2020_max_week)
+death_filename  <- sprintf("./data/Belgium/DEMO_DEATH_OPEN_W%d.txt", death_2020_max_week)
 if ( !file.exists(death_filename)){
-  download.file("https://statbel.fgov.be/sites/default/files/files/opendata/deathday/DEMO_DEATH_OPEN.zip", "./data/DEMO_DEATH_OPEN.zip")
-  setwd("data")
-  unzip("DEMO_DEATH_OPEN.zip")
-  setwd("..")
+  download.file("https://statbel.fgov.be/sites/default/files/files/opendata/Belgium/deathday/DEMO_DEATH_OPEN.zip", "./data/Belgium/DEMO_DEATH_OPEN.zip")
+  unzip("DEMO_DEATH_OPEN.zip", exdir = "./data/Belgium" )
 }
 
 death <- read_delim(death_filename, ";", escape_double = FALSE, trim_ws = TRUE)
@@ -109,7 +105,6 @@ death <- merge( death, weeks, by.x = "week", by.y = "week")
 death_yearly <- death %>% group_by( sex, age_group, year ) %>% summarise( death_observed_yearly = sum(death_observed))
 
 # Compute the histogram of deaths per week excluding year 2020. 
-# This model is over-fitted if we try to match every week, so we won't group by sex.
 death_per_week_of_year <- death %>% 
   group_by( age_group, sex ) %>% 
   arrange( age_group, sex, date ) %>%
@@ -131,7 +126,7 @@ death_per_week_of_year <- death %>%
 # You need a password to download this file.
 # download.file("https://www.mortality.org/hmd/BEL/STATS/Mx_1x1.txt", "hmd_BEL_STATS_Mx_1x1.txt" )
 
-mortality <- read_table2("./data/hmd_BEL_STATS_Mx_1x1.txt", skip = 1)
+mortality <- read_table2("./data/Belgium/hmd_BEL_STATS_Mx_1x1.txt", skip = 1)
 
 mortality_male <- mortality[, c("Year", "Age", "Male")]
 names(mortality_male) <- c("year", "age", "mortality")
@@ -155,7 +150,7 @@ mortality <-
   filter ( year < 1914 | year > 1918 ) %>%
   arrange( age, sex, year ) %>%
   group_by( age, sex ) %>%
-  mutate( mortality_fixed = na.approx( mortality, na.rm = FALSE ))
+  mutate( mortality = na.approx( mortality, na.rm = FALSE ))
   
 
 
@@ -166,11 +161,11 @@ mortality <- merge( mortality, age, by = c("age"))
 
 # Load COVID death
 
-if ( !file.exists("./data/COVID19BE_MORT.csv")){
-  download.file("https://epistat.sciensano.be/Data/COVID19BE_MORT.csv", "./data/COVID19BE_MORT.csv")
+if ( !file.exists("./data/Belgium/COVID19BE_MORT.csv")){
+  download.file("https://epistat.sciensano.be/data/Belgium/COVID19BE_MORT.csv", "./data/Belgium/COVID19BE_MORT.csv")
 }
 
-covid_death <- read_csv("./data/COVID19BE_MORT.csv", col_types = cols(REGION = col_skip()))
+covid_death <- read_csv("./data/Belgium/COVID19BE_MORT.csv", col_types = cols(REGION = col_skip()))
 names(covid_death) <- c("day","age_group","sex", "covid_death")
 
 # Group COVID data by week.
@@ -188,13 +183,13 @@ covid_death <-covid_death %>%
 
 ### TEMPERATURES
 
-# https://opendata.meteo.be/geonetwork/srv/eng/catalog.search;jsessionid=B123D8FF9D843F6B8721B8878EB55479#/metadata/RMI_DATASET_AWS_1DAY
-if ( !file.exists("./data/weather.csv")){
+# https://opendata.meteo.be/geonetwork/srv/eng/catalog.search;jsessionid=B123D8FF9D843F6B8721B8878EB55479#/metadata/Belgium/RMI_DATASET_AWS_1DAY
+if ( !file.exists("./data/Belgium/weather.csv")){
  download.file("https://opendata.meteo.be/service/aws/wfs?request=GetFeature&service=WFS&version=1.1.0&typeName=aws:aws_1day&outputFormat=csv", 
-               "./data/weather.csv")
+               "./data/Belgium/weather.csv")
 }
 
-weather <- read_csv("./data/weather.csv", col_types = cols(FID = col_skip(), 
+weather <- read_csv("./data/Belgium/weather.csv", col_types = cols(FID = col_skip(), 
                                                          the_geom = col_skip(),
                                                          qc_flags = col_skip()))
 
@@ -203,16 +198,14 @@ weather$code <- as.factor(weather$code)
 
 ### DEATH CAUSES
 
-# https://statbel.fgov.be/fr/open-data/causes-de-deces-par-mois-sexe-groupe-dage-et-region
+# https://statbel.fgov.be/fr/open-data/Belgium/causes-de-deces-par-mois-sexe-groupe-dage-et-region
 
-if ( !file.exists("./data/opendata_COD_cause.txt")){
-  download.file("https://statbel.fgov.be/sites/default/files/files/opendata/COD/opendata_COD_cause.zip", "./data/opendata_COD_cause.zip")
-  setwd("data")
-  unzip("opendata_COD_cause.zip")
-  setwd("..")
+if ( !file.exists("./data/Belgium/opendata_COD_cause.txt")){
+  download.file("https://statbel.fgov.be/sites/default/files/files/opendata/Belgium/COD/opendata_COD_cause.zip", "./data/Belgium/opendata_COD_cause.zip")
+  unzip("opendata_COD_cause.zip", exdir = "./data/Belgium")
 }
 
-death_cause <- read_delim("data/opendata_COD_cause.txt", 
+death_cause <- read_delim("data/Belgium/opendata_COD_cause.txt", 
                           ";", escape_double = FALSE, col_types = cols(CD_RGN_REFNIS = col_skip()), 
                           trim_ws = TRUE)
 
@@ -244,7 +237,7 @@ accidental_death <-
 
 # Classification of diseases: https://www.who.int/classifications/classification-of-diseases
 
-# Variables: https://statbel.fgov.be/sites/default/files/files/opendata/COD/OpenDataVerklaring_V1.xlsx
+# Variables: https://statbel.fgov.be/sites/default/files/files/opendata/Belgium/COD/OpenDataVerklaring_V1.xlsx
 
 
 
@@ -336,7 +329,7 @@ excess_death_2020$observed_mortality <- excess_death_2020$death_observed / exces
 
 
 # Comparing excess deaths to COVID deaths
-compared_covid_death <- merge( covid_death, death_expected_weekly, by = c("date", "age_group", "sex") )
+compared_covid_death <- merge( covid_death, death_expected_weekly, by = c("date", "age_group", "sex"), all.y = TRUE )
 
 
 
@@ -376,8 +369,8 @@ accidental_death_lr_coefficients <- transpose( data.frame(  accidental_death %>%
                                                        group_map( ~ c( .y$sex, .y$age_group, coefficients(lm( percent_accidental_death ~ year, data = .x ))) )))
   
 names(accidental_death_lr_coefficients) <- c("sex", "age_group", "intercept", "year_coefficient")
-accidental_death_lr_coefficients$intercept = as.double(accidental_death_lr_coefficients$intercept)
-accidental_death_lr_coefficients$year_coefficient = as.double(accidental_death_lr_coefficients$year_coefficient)
+accidental_death_lr_coefficients$intercept <- as.double(accidental_death_lr_coefficients$intercept)
+accidental_death_lr_coefficients$year_coefficient <- as.double(accidental_death_lr_coefficients$year_coefficient)
 
 
 accidental_death_2020 <-

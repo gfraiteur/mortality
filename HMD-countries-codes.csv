@@ -1,0 +1,46 @@
+name,code,iso_code
+Australia,AUS
+Austria,AUT
+Belarus,BLR
+Belgium,BEL
+Bulgaria,BGR
+Canada,CAN
+Chile,CHL
+Croatia,HRV
+Czechia,CZE
+Denmark,DNK
+Estonia,EST
+Finland,FIN
+France,FRATNP,FRA
+Germany,DEUTNP,DEU
+West Germany,DEUTW,DEU
+East Germany,DEUTE,DEU
+Greece,GRC
+Hungary,HUN
+Iceland,ISL
+Ireland,IRL
+Israel,ISR
+Italy,ITA
+Japan,JPN
+Korea,KOR
+Latvia,LVA
+Lithuania,LTU
+Luxembourg,LUX
+Netherlands,NLD
+New Zealand,NZL_NP
+Norway,NOR
+Poland,POL
+Portugal,PRT
+Russia,RUS
+Slovakia,SVK
+Slovenia,SVN
+Spain,ESP
+Sweden,SWE
+Switzerland,CHE
+Taiwan,TWN
+United Kingdom,GBR_NP,GBR
+England & Wales,GBRTENW
+Scotland,GBR_SCO
+Northern Ireland,GBR_NIR
+U.S.A.,USA
+Ukraine,UKR

@@ -2,17 +2,17 @@
 title: "An analysis of excess mortality in 2020 in Belgium"
 author: "Gael Fraiteur"
 output:
-  html_document:
-    toc: yes
-    toc_depth: 2
-    fig_width: 9
-    fig_height: 6
   github_document:
     toc: yes
     toc_depth: 2
     fig_width: 12
     fig_height: 6
     html_preview: no
+  html_document:
+    toc: yes
+    toc_depth: 2
+    fig_width: 9
+    fig_height: 6
   pdf_document:
     toc: yes
     toc_depth: '2'
@@ -34,33 +34,33 @@ this_theme <- function() {
 
 ## Introduction
 
-The COVID19 epidemic has caused disruptions of our societies that have not been seen in Western Europe since World Ware II. However, it is still difficult to 
-understand how exceptional this epidemic actually is compared to historic mortality data. Is it a once-in-a-century event, or does it repeat every ten years?
-This article attempts to shed some light on these questions.
 
-When discussing the effect of the COVID19 epidemic, Belgium is an interesting country to study for several reasons. First, it has
-the highest reported death rate from COVID19 in the world. Secondly, Statbel, the Belgian governmental agency for statistics, publishes mortality
-information every week with a delay of just 3 weeks. Last and not least, this is the country where the author grew up.
+L'épidémie de COVID19 a provoqué des bouleversements de nos sociétés qui n'ont pas été observés en Europe occidentale depuis la seconde guerre mondiale.
+Cependant, il est encore difficile de comprendre à quel point cette épidémie est exceptionnelle en comparaison avec les données historiques de mortalité. 
+S'agit-il d'un événement qui se répète une fois par siècle seulement ou une fois tous les dix ans? Cet article tente de faire la lumière sur ces questions.
 
-Our approach is to compare the number of deaths in 2020 (for weeks 1 to `r death_2020_max_week`) with the number of deaths that would be _expected_ based on 
-the structure of the population on January 1^st^, 2020 and on the usual death rates. The difference between expectations and reality
-gives us a metric named _excess deaths_ when it is positive, or _deaths deficit_ when it is negative.
+Lorsqu'on évoque les effets de l'épidémie de COVID19, la Belgique est un pays intéressant à étudier pour plusieurs raisons. Premièrement, elle a
+le taux de mortalité attribué au COVID19 le plus élevé au monde. Deuxièmement, Statbel, l'agence gouvernementale belge des statistiques, publie des données sur la
+mortalité chaque semaine avec un délai de seulement 3 semaines. Dernier point et non des moindres, c'est le pays originaire de l'auteur.
 
-We compare this metric with the number of deaths due to COVID as reported by Sciensano, and with historical death and mortality data.
+Notre approche consiste à comparer le nombre de décès en 2020 (pour les semaines 1 à `r death_2020_max_week`) avec le nombre de décès qui seraient _attendus_ en 
+fonction de la structure de la population au 1^er^ janvier 2020 et des taux de mortalité habituels. La différence entre les attentes et la réalité
+nous donne une métrique nommée _excès de mortalité_ quand elle est positive, ou _déficits de mortalité_ quand elle est négative.
 
-At the end of the article, we try to answer a few controversial questions based on data.
+Nous comparons cette métrique avec le nombre de décès attribués au COVID19 tel que rapporté par Sciensano, et avec les données historiques de décès et de mortalité.
 
-This article, as well as all R scripts that have been used to compute the data, are hosted on GitHub at https://github.com/gfraiteur/mortality.
-All data comes from open sources and can be freely downloaded. If you have a question or remark related to this article, 
-or if you have found a bug or inaccuracy, please open an issue on GitHub or, better, submit a pull request.
+À la fin de l'article, nous essayons de répondre à quelques questions controversées sur base de ces données historiques.
 
+Cet article, ainsi que tous les scripts R qui ont été utilisés pour calculer les données, sont hébergés sur GitHub à l'adresse https://github.com/gfraiteur/mortality.
+Toutes les données proviennent de sources ouvertes et peuvent être téléchargées gratuitement. Si vous avez une question ou une remarque relative à cet article,
+ou si vous avez trouvé un bogue ou une inexactitude, veuillez signaler le problème sur GitHub ou, mieux, soumettre une pull request.
 
-## About the author
+## A propos de l'auteur
 
-Gael Fraiteur graduated from the Louvain School of Engineering in 2001 as a civil engineer in applied mathematics. He also holds two minor degrees
-in philosophy from UCLouvain. He has worked since then in the software industry. In 2004, he started an open-source project named PostSharp. In 2009, he founded a company
-to market and develop the product. As the CEO and principal engineer of PostSharp Technologies, the author now shares his time between R&D, management and marketing. 
-
+Gael Fraiteur est sorti de l'Ecole polytechnique de Louvain en 2001 avec un diplôme ingénieur civil en mathématiques appliquées. Il détient également deux diplômes 
+mineurs en philosophie de la même université. Il travaille depuis dans l'industrie informatique. En 2004, il a lancé un projet open source nommé PostSharp. En 2009, 
+il a fondé une société pour commercialiser et développer le produit. En tant que directeur et ingénieur principal de PostSharp Technologies, l'auteur partage 
+désormais son temps entre la R&D, la gestion et le marketing.
 
 ## Data sources
 
