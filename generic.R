@@ -20,7 +20,7 @@ if ( !exists("country")) {
 
 # Remove everything in the environment but not the data we downloaded from mortality.org.
 rm(
-  list= setdiff(ls(), c("hmd_mx", "hmd_pop", "country", "all_graphs"))
+  list= setdiff(ls(), c("hmd_mx", "hmd_pop", "country", "all_graphs", "selected_countries"))
   )
 
 
@@ -37,8 +37,13 @@ if ( !exists("all_graphs")) {
  all_graphs <- list() 
 }
 
-this_theme <- function() {
-  ggtitle(caption =  country_name) + theme_minimal() + theme(legend.position='bottom')
+this_theme <- function(title) {
+  if ( exists("max_week_2020")) {
+    caption = sprintf( "Death data available until %d-th week of 2020", max_week_2020 )
+  } else  {
+    caption = NULL
+  }
+  labs(title = title, subtitle = country_name, caption = caption) 
 }
 
 append_graph <- function(name) {
@@ -105,12 +110,22 @@ death <- death %>%
   filter( !is.na(as.integer(death$Age)) & Year >= 2009) %>%
   select( -Type, -Access )
 
+age_end = 120
 # Generate age groups from death file
 death$age_min <- as.integer(death$Age)
-death$age_max <-  ifelse( death$AgeInterval == "+", 120, as.integer(death$Age) + as.integer(death$AgeInterval) - 1 )
-death$age_group <- ifelse( death$AgeInterval == "+" , paste( death$Age, "+", sep = ""), sprintf("%02d-%02d", as.integer( death$Age ), as.integer( death$Age ) + as.integer(death$AgeInterval) - 1)  )
+death$age_max <-  ifelse( death$AgeInterval == "+", age_end, as.integer(death$Age) + as.integer(death$AgeInterval) - 1 )
 
-age = data.frame( age = 0:120 )
+# Coerce the max age group to be 90+. Some countries (Germany for instance) have 95+ and it makes things more difficult to compare.
+death <- death %>%
+  mutate(
+    age_min = ifelse( age_min >= 90, 90, age_min ),
+    age_max = ifelse( age_min >= 90, age_end, age_max )
+  )
+
+
+death$age_group <- ifelse( death$age_max == age_end , paste( death$age_min, "+", sep = ""), sprintf("%02d-%02d", death$age_min, death$age_max)  )
+
+age = data.frame( age = 0:age_end )
 
 age_group <- death %>%
   group_by( age_min, age_max, age_group ) %>%
@@ -118,11 +133,11 @@ age_group <- death %>%
   ungroup() %>% 
   arrange(age_min)
 
-# In Austria, we have two age groups used for temporary data: 0-64 and 65+. We remove these groups.
-if ( country == "AUT") {
-  death <- death %>% filter( !(age_group %in% c("00-64", "65+") ) )
-  age_group <- age_group %>% filter( !(age_group %in% c("00-64", "65+") ) )
-}
+# In some countries, we have coarse age groups for temporary data (last two or three weeks). 
+# We remove these groups and the corresponding data.
+temporary_age_groups = age_group %>% filter( year_count == 1 )
+death <- death %>% filter( !(age_group %in% temporary_age_groups$age_group ) )
+age_group <- age_group %>% filter( !(age_group %in% temporary_age_groups$age_group ) )
 
 
 # French data have overlapping age groups. Need to select supersets.
@@ -178,18 +193,19 @@ death_yearly <- death %>%
 
 # Graph yearly deaths
 
-death %>%
-  filter ( year < 2020 ) %>%
-  group_by( year ) %>%
-  summarize( death_observed = sum( death_observed )) %>%
-  ggplot( aes( x = year, y = death_observed)) + 
-  geom_line(aes()) + 
-  ggtitle("Number of deaths per year") +
-  scale_x_continuous( breaks = 2005:2019,name = "year") +
-  scale_y_continuous( labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths") +
-  this_theme()
-
-append_graph("death")
+if ( FALSE ) {
+  death %>%
+    filter ( year < 2020 ) %>%
+    group_by( year ) %>%
+    summarize( death_observed = sum( death_observed )) %>%
+    ggplot( aes( x = year, y = death_observed)) + 
+    geom_line(aes()) + 
+    this_theme("Number of deaths per year") +
+    scale_x_continuous( breaks = 2005:2019,name = "year") +
+    scale_y_continuous( labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths") 
+  
+  append_graph("death")
+}
 
 # Compute the histogram of deaths per week excluding year 2020. 
 death_per_week_of_year <- death %>% 
@@ -203,7 +219,6 @@ death_per_week_of_year <- death %>%
   ungroup() %>%
   group_by( age_group, sex ) %>%
   mutate( week_death_percent = avg_death_in_week_of_year / sum(avg_death_in_week_of_year)  )
-
 
 
 
@@ -235,7 +250,7 @@ population_structure_max_year = max( population_structure$year )
 # Extrapolate the population structure to 2020 by using a linear regression for each age group.
 if ( population_structure_max_year < 2020 ) {
   
-  missing_years <- data.frame( year = seq(population_structure_max_year+1, 2020, 1) )
+  population_structure_missing_years <- data.frame( year = seq(population_structure_max_year+1, 2020, 1) )
 
   population_structure_extrapolated <- transpose( data.frame(  population_structure %>% 
                                                             filter( year >= population_structure_max_year - 5 ) %>%
@@ -247,7 +262,7 @@ if ( population_structure_max_year < 2020 ) {
   population_structure_extrapolated$intercept <- as.double(population_structure_extrapolated$intercept)
   population_structure_extrapolated$year_coefficient <- as.double(population_structure_extrapolated$year_coefficient)
   
-  population_structure_extrapolated <- merge( population_structure_extrapolated, missing_years )
+  population_structure_extrapolated <- merge( population_structure_extrapolated, population_structure_missing_years )
   
   population_structure_extrapolated$population_count <- population_structure_extrapolated$intercept + population_structure_extrapolated$year * population_structure_extrapolated$year_coefficient
 
@@ -258,6 +273,15 @@ if ( population_structure_max_year < 2020 ) {
 
 population_structure$age <- as.integer(population_structure$age)
 
+population_axis_scale = as.double(
+  population_structure %>% 
+  filter( year == 2020 & age >= 65 ) %>% 
+  group_by() %>%
+  summarise(population_count = sum(population_count)) ) / 100000
+
+population_axis_name = "per 100K inh. over 65 in 2020"
+
+population_axis_transform = eval( parse( text = sprintf("function(x) x / %f", population_axis_scale ), keep.source = TRUE ))
 
 # Joining with age group
 population_structure <- merge( population_structure, age, by = c("age") )
@@ -283,8 +307,7 @@ population_structure %>%
   ggplot( aes( x = age, y = population_count, color = sex) ) +
   geom_line()  +
   scale_x_continuous(name = "age", breaks = seq(0,100,10), sec.axis = sec_axis( ~ 2020 - ., breaks = seq(1920,2020,10), name = "birth year" ))  +
-  this_theme() +
-  ggtitle("Population structure in 2020")
+  this_theme("Population structure in 2020")
 
 append_graph("population_structure")
 
@@ -324,6 +347,40 @@ mortality <- mortality[complete.cases(mortality),]
 
 
 
+
+# Compute a liner regression for each age and sex
+mortality_lr_coefficients <- transpose( data.frame(  mortality %>% 
+                                                       filter( year >=  2009 ) %>%
+                                                       group_by(sex, age) %>%
+                                                       group_map( ~ c( .y$sex, .y$age, coefficients(lm( mortality ~ year, data = .x ))) )))
+
+names(mortality_lr_coefficients) <- c("sex", "age", "intercept_coeff", "year_coeff")
+mortality_lr_coefficients$intercept_coeff <- as.double(mortality_lr_coefficients$intercept_coeff)
+mortality_lr_coefficients$year_coeff <- as.double(mortality_lr_coefficients$year_coeff)
+
+# Remove NA. We should have them only for high age with very low number of people so it is safe to ignore.
+mortality_lr_coefficients = mortality_lr_coefficients[complete.cases(mortality_lr_coefficients), ]
+
+# Extend the mortality dataset with projections
+mortality$extrapolated = FALSE
+mortality_max_year = max(mortality$year)
+if ( mortality_max_year < 2019 ) {
+  
+  mortality_missing_years <- data.frame( year = seq(mortality_max_year+1, 2019, 1) )
+  
+  
+
+  mortality_extrapolated <- merge( mortality_lr_coefficients, mortality_missing_years )
+  
+  mortality_extrapolated$mortality <- mortality_extrapolated$intercept_coeff + mortality_extrapolated$year * mortality_extrapolated$year_coeff
+  mortality_extrapolated$extrapolated = TRUE
+  mortality_extrapolated$age = as.integer(mortality_extrapolated$age)
+  
+  mortality <- rbind( mortality  %>% select(age, sex, year, mortality, extrapolated ),
+                      mortality_extrapolated %>% select(age, sex, year, mortality, extrapolated ))
+}
+
+
 # Mortality by age group
 
 mortality_by_age_group <-
@@ -334,29 +391,19 @@ mortality_by_age_group <-
 
 ### MORTALITY GRAPHS
 
+if (FALSE) {
+  mortality_by_age_group %>%
+    filter( age_group >= "50" & year >= 2009) %>%
+    ggplot( aes( x = year, y = mortality, color = age_group, linetype = sex) ) +
+    geom_line() +
+    scale_color_discrete() +
+    scale_x_continuous(name = "year", breaks = 2009:2020, minor_breaks = FALSE) +
+    scale_y_log10(labels = scales::percent_format(accuracy = 0.1), name = "death rate (log10 scale)")  +
+    this_theme("Death rate for different ages")
+  
+  append_graph("death_rate")
+}
 
-mortality_by_age_group %>%
-  filter( age_group >= "50" & year >= 2009) %>%
-  ggplot( aes( x = year, y = mortality, color = age_group, linetype = sex) ) +
-  geom_line() +
-  scale_color_discrete() +
-  scale_x_continuous(name = "year", breaks = 2009:2020, minor_breaks = FALSE) +
-  scale_y_log10(labels = scales::percent_format(accuracy = 0.1), name = "death rate (log10 scale)")  +
-  this_theme() +
-  ggtitle("Death rate for different ages")
-
-append_graph("death_rate")
-
-# Compute a liner regression for each age and sex
-
-mortality_lr_coefficients <- transpose( data.frame(  mortality %>% 
-                                                       filter( year >=  2009 ) %>%
-                                                       group_by(sex, age) %>%
-                                                       group_map( ~ c( .y$sex, .y$age, summary(lm( mortality ~ year, data = .x ))$coefficients[,1]) )))
-
-names(mortality_lr_coefficients) <- c("sex", "age", "intercept_coeff", "year_coeff")
-mortality_lr_coefficients$intercept_coeff <- as.double(mortality_lr_coefficients$intercept_coeff)
-mortality_lr_coefficients$year_coeff <- as.double(mortality_lr_coefficients$year_coeff)
 
 # Extend the population_structure dataset with death projections based on the mortality model
 death_expected_yearly <- merge( population_structure, mortality_lr_coefficients, by = c("sex", "age")  ) 
@@ -396,12 +443,27 @@ death_expected_yearly %>%
   ggplot( aes(year, y = value)) + 
   geom_line(aes(y = death_expected_yearly,  color="expected")) + 
   geom_line(aes(y = death_observed_yearly,  color="real")) +
-  ggtitle("Expected vs observed number of deaths per year ") +
+  this_theme("Expected vs observed number of deaths per year ") +
   scale_x_continuous(name = "year", breaks = 2009:2019, minor_breaks = FALSE, limits = c(2009,2019)) +
-  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE)) +
-  this_theme( )+ theme(legend.title = element_blank()) 
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE),
+                     limits = c(3900 * population_axis_scale, 6000 * population_axis_scale),
+                     sec.axis = sec_axis( population_axis_transform, name = population_axis_name)) +
+  theme(legend.title = element_blank()) 
 
 append_graph("expected_death_per_year")
+
+# Graph: patterns of weeks of year
+death_per_week_of_year %>%
+  merge( death_expected_yearly %>% filter(year==2020) ) %>%
+  mutate( death_expected = week_death_percent * death_expected_yearly ) %>%
+  group_by(week_of_year,age_group) %>%
+  summarise(death_expected=sum(death_expected)) %>%
+  ggplot(aes(x=week_of_year,y=death_expected, fill=forcats::fct_rev(age_group))) +
+  geom_area( stat="identity" ) +
+  scale_fill_discrete(name = "age group" ) + 
+  this_theme("Week-of-year mortality pattern projected on the 2020 population")   
+  
+append_graph("death_per_week_of_year")
 
 # Compute expected number of death per week
 death_expected_weekly <- death %>% 
@@ -424,12 +486,14 @@ death_expected_weekly %>%
   ungroup() %>%
   arrange(date ) %>%
   ggplot( aes(x = date)) + 
-  this_theme() + theme(legend.title = element_blank())  +
+   theme(legend.title = element_blank())  +
   geom_line(aes(y = death_expected, col = "expected")) + 
   geom_line(aes(y = death_observed, col = "observed")) +
   scale_x_date( date_breaks = "1 year", labels = date_format("%Y"), name = "year", limits = c( as.Date( "2010-01-01" ), as.Date("2020-12-31") )) +
-  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths per week", limits = c(0,NA)) +
-  ggtitle("Expected vs observed number of deaths per week")  
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths per week", 
+                     limits = c(0,250 * population_axis_scale),
+                     sec.axis = sec_axis( population_axis_transform, name = population_axis_name)) +
+  this_theme("Expected vs observed number of deaths per week")  
 
 append_graph("expected_death_per_week")
 
@@ -440,12 +504,14 @@ death_expected_weekly %>%
   ungroup() %>%
   arrange(date ) %>%
   ggplot( aes(x = date)) + 
-  this_theme() + theme(legend.title = element_blank())  +
+   theme(legend.title = element_blank())  +
   geom_line(aes(y = death_expected, col = "expected")) + 
   geom_line(aes(y = death_observed, col = "observed")) +
   scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "year", limits = c( as.Date( "2020-01-01" ), Sys.Date() ) ) +
-  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths per week", limits = c(0,NA)) +
-  ggtitle("Expected vs observed number of deaths per week (since 01/2020)")  
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths per week", 
+                     limits = c(0,250 * population_axis_scale),
+                     sec.axis = sec_axis( population_axis_transform, name = population_axis_name)) +
+  this_theme("Expected vs observed number of deaths per week (since 01/2020)")  
 
 append_graph("expected_death_per_week_2020")
 
@@ -463,9 +529,11 @@ death_expected_weekly %>%
   geom_line(aes(y = excess_death, col = "weekly excess deaths")) + 
   geom_line(aes(y = cum_excess_deaths, col = "cumulative excess deaths")) +
   scale_x_date( date_breaks = "1 year", labels = date_format("%Y"), name = "year") +
-  ggtitle("Cumulative excess deaths") +
-  this_theme() + theme(legend.title = element_blank()) +
-  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "excess deaths" )
+  this_theme("Cumulative excess deaths") +
+   theme(legend.title = element_blank()) +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "excess deaths",
+                     limits = c(-250*population_axis_scale, 700 * population_axis_scale),
+                     sec.axis = sec_axis( population_axis_transform, name = population_axis_name))
 
 append_graph("cumulative_excess_death_per_year")
 
@@ -497,23 +565,27 @@ excess_death_2020$observed_death_rate <- excess_death_2020$death_observed / exce
 excess_death_2020$expected_yearly_death_rate <- excess_death_2020$death_expected_yearly / excess_death_2020$population_count
 excess_death_2020$observed_yearly_death_rate <- excess_death_2020$expected_yearly_death_rate + excess_death_2020$excess_death_rate
 
+# Test whether the excess death is significant
+excess_death_2020$excess_death_signicant = unlist(Map(function(x,n,p) prop.test(x,n,p,alternative="greater")$p.value < 0.05, 
+                                       x = excess_death_2020$death_observed, 
+                                       n = excess_death_2020$population_count, 
+                                       p = excess_death_2020$expected_death_rate))
 
 
 # Graphs 
 for ( s in sex) {
   plot <-
     mortality_by_age_group %>%
-      filter( age_group >= "50" & sex == s & year >= 2009) %>%
+      filter( age_group >= "50" & sex == s & year >= 2000) %>%
       ggplot( aes( x = year, y = mortality, color = age_group) ) +
       geom_line( ) +
       geom_point(data = excess_death_2020 %>% filter( age_group >= "50" & sex == s), aes( x = 2020, y = observed_yearly_death_rate, color =age_group)) +
       geom_hline(data = excess_death_2020 %>% filter( age_group >= "50" & sex == s), aes( yintercept = observed_yearly_death_rate, color =age_group), linetype="dashed") +
       geom_text(data = excess_death_2020 %>% filter( age_group >= "50" & sex == s), aes( color = age_group, x = 2019.5, y = observed_yearly_death_rate*1.15, label=age_group)) +
       scale_color_discrete() +
-      scale_x_continuous(name = "year", limit=c(2009,2020), breaks=2009:2020, minor_breaks = NULL) +
-      scale_y_log10(labels = scales::percent_format(accuracy = 0.1), name = "death rate (log10 scale)")  +
-      this_theme() +
-      ggtitle( sprintf("Historical death rate for different ages\ncompared to projected rate in 2020, sex =", s) )
+      scale_x_continuous(name = "year", limit=c(2000,2020), breaks=2000:2020, minor_breaks = NULL) +
+      scale_y_log10(labels = scales::percent_format(accuracy = 0.1), name = "death rate (log10 scale)", limits = c(0.001, 0.4))  +
+      this_theme( sprintf("Historical death rate for different ages\ncompared to extrapolated rate in 2020, sex = %s", s) )
   
   print(plot)
   
@@ -531,33 +603,47 @@ excess_death_2020 %>%
   ggplot(aes(x=age_min, y=value, color=sex, linetype=variable)) +
   geom_point(aes()) +
   geom_line(aes()) +
-  scale_y_log10(labels = scales::percent_format(accuracy = 0.1), name = "death rate (log10 scale)", limits = c(0.0005, 0.3))  +
+  scale_y_log10(labels = scales::percent_format(accuracy = 0.1), name = "death rate (log10 scale)", limits = c(0.0005, 0.333))  +
   scale_x_continuous(name = "age group") +
-  this_theme() +
-  ggtitle( sprintf("expected vs observed death rate in first %d weeks of 2020", max_week_2020)) 
+  this_theme( "Expected vs observed death rate 2020") 
 
+append_graph("compared_death_rate_2020")
+
+excess_death_2020 %>%
+  merge( age_group ) %>%
+  filter( age_min >= 45) %>%
+  group_by(age_min,sex) %>%
+  summarise(excess_death_rate = (sum(death_observed) - sum(expected_death)) / sum(population_count)  )  %>%
+  ggplot(aes(x=age_min, y=excess_death_rate, color=sex)) +
+  geom_point(aes()) +
+  geom_line(aes()) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1), name = "excess death rate", limits = c(-0.02, 0.05), breaks = seq(-0.02,0.05,0.01))  +
+  scale_x_continuous(name = "age group") +
+  this_theme( "Excess death rate 2020") 
 
 append_graph("excess_death_rate_2020")
+
 
 # Comparable years
 
 years_with_more_mortality <-
   excess_death_2020 %>%
-  select( age_group, sex, observed_yearly_death_rate) %>%
+  select( age_group, sex, observed_yearly_death_rate, excess_death_signicant) %>%
   rename( death_rate_2020 = observed_yearly_death_rate ) %>%
   merge( mortality_by_age_group ) %>%
   filter( mortality > death_rate_2020 ) %>%
-  group_by( age_group, sex ) %>%
-  summarise( last_year_equivalent_death_rate = max(year))
+  group_by( age_group, sex, excess_death_signicant ) %>%
+  summarise( last_year_equivalent_death_rate = max(year)) %>%
+  ungroup() %>%
+  mutate( death_rate_exceptionality = ifelse( !excess_death_signicant, 0, log(2020-last_year_equivalent_death_rate, base = 2)) )
 
 
 years_with_more_mortality %>%
-  filter( age_group >= "40") %>%
-  ggplot(aes(x=age_group, y= last_year_equivalent_death_rate, color = sex)) +
-  geom_point(stat="identity", aes(shape = sex), alpha = 0.7, size = 5, fill = "transparent")  +
-  scale_y_continuous(name = "year", trans="reverse", limits = c(2020,NA), breaks=1900:2020, minor_breaks = FALSE)  +
-  this_theme() +
-  ggtitle( "Number of equivalent years of death rate regression for different age groups") 
+#  filter( age_group >= "40") %>%
+  ggplot(aes(x=age_group, y= death_rate_exceptionality, fill = sex)) +
+  geom_bar(stat="identity",position = position_dodge2(preserve = "single"))  +
+  scale_y_continuous(name = "exceptionality",  limits = c(0,5), minor_breaks = FALSE)  +
+  this_theme( "Exceptionality of the 2020 absolute mortality rates") 
 
 
 append_graph("year_with_comparable_death_rate")
@@ -570,7 +656,7 @@ mortality_deviation <-
     group_by( year, sex, age_group ) %>%
     summarise( mortality = mean(mortality)) %>%
     group_by( sex, age_group ) %>%
-    mutate( mortality_rollmean = rollmedian( mortality, 5, align="center", na.pad=TRUE ))
+    mutate( mortality_rollmean = rollapply( mortality, 3, function(z) (z[1] + z[3])/2, align="center", fill = NA  ) )
 
 mortality_deviation$deviation <-
   mortality_deviation$mortality - mortality_deviation$mortality_rollmean
@@ -582,19 +668,20 @@ years_with_more_mortality <-
   mortality_deviation %>%
     merge( excess_death_2020 ) %>%
     filter( deviation >= excess_death_rate ) %>%
-    group_by( age_group, sex ) %>%
+    group_by( age_group, sex, excess_death_signicant ) %>%
     summarise( last_year_equivalent_excess_death_rate = max(year))  %>%
+    ungroup() %>%
+    mutate( excess_death_rate_exceptionality = ifelse( !excess_death_signicant, 0,  log(2020-last_year_equivalent_excess_death_rate, base = 2))) %>%
     merge( years_with_more_mortality )
 
 
 
 years_with_more_mortality %>%
-  filter( age_group >= "40") %>%
-  ggplot(aes(x=age_group, y=last_year_equivalent_excess_death_rate, color = sex)) +
-  geom_point(stat="identity", aes(shape = sex), alpha = 0.7, size = 5, fill = "transparent")  +
-  scale_y_continuous(name = "year", trans="reverse", limits = c(2020,NA), breaks=seq(1900,2020,5), minor_breaks = FALSE)  +
-  this_theme() +
-  ggtitle( "Number of equivalent years of similar excess death rate for different age groups") 
+#  filter( age_group >= "40") %>%
+  ggplot(aes(x=age_group, y=excess_death_rate_exceptionality, fill = sex)) +
+  geom_bar(stat="identity", position = position_dodge2(preserve = "single"))  +
+  scale_y_continuous(name = "exceptionality",  limits = c(0,7), breaks = 1:7,  minor_breaks = FALSE)  +
+  this_theme( "Exceptionality of the 2020 excess mortality rates")
 
 append_graph("year_with_comparable_excess_death_rate")
 
@@ -646,16 +733,18 @@ covid_death[is.na(covid_death)] <- 0
 # Graph: COVID death vs excess death
 death_expected_weekly %>%
   group_by( week ) %>%
-  summarise( excess_death = sum(excess_death) ) %>%
+  summarise( excess_death = sum(excess_death)  ) %>%
   merge( covid_death, all.y = TRUE ) %>%
   merge( weeks ) %>%
   ggplot( aes( x = date )) +
     geom_line( aes( y = covid_death, color = "COVID death" )) +
     geom_line( aes( y = excess_death, color = "excess death" )) +
     scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "date") +
-    scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths per week") +
-    this_theme() +
-    ggtitle( "Number of weekly excess death compared to COVID19-attributed death") 
+    scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths per week",
+                       limits = c(-25*population_axis_scale, 150*population_axis_scale),
+                       sec.axis = sec_axis( population_axis_transform, name = population_axis_name)
+                       ) +
+    this_theme( "Number of weekly excess deaths compared to COVID19-attributed deaths") 
 
   
 append_graph("covid_death")
@@ -672,12 +761,14 @@ death_expected_weekly %>%
   ggplot( aes( x = date )) +
   geom_line( aes( y = covid_death, color = "COVID death" )) +
   geom_line( aes( y = excess_death, color = "excess death" )) +
-  this_theme() +
   scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "date") +
-  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths per week") +
-  ggtitle( "Number of cumulative excess death compared to COVID19-attributed death") 
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "cumulative number of deaths",
+                     limits = c(-100*population_axis_scale, 1000*population_axis_scale),
+                     sec.axis = sec_axis( population_axis_transform, name = population_axis_name)) +
+  this_theme( "Number of cumulative excess deaths compared to COVID19-attributed deaths") 
 
 
 append_graph("covid_cumulative_death")
 
 all_graphs[[country]] <- graphs
+

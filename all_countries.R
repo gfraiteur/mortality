@@ -1,8 +1,7 @@
 library( ggpubr)
 
-selected_countries = c( "BEL", "FRATNP", "CHE", "ESP", "DEUTNP", "ITA")
+selected_countries = c( "BEL", "FRATNP", "CHE", "ESP", "DEUTNP", "ITA", "CZE", "POL", "NLD", "DNK", "SWE", "FIN")
 rm ( all_graphs )
-
 
 
 for ( country in selected_countries ) {
@@ -38,18 +37,15 @@ print_graphs = function(graphs) {
   graphs_without_title$title = NULL
   figure <- ggarrange( plotlist = graphs_without_title,
                        common.legend = TRUE, 
-                       legend = "bottom", 
-                       labels = selected_countries_info[names(graphs_without_title),]$name )
-  annotate_figure(figure, top = text_grob(trimws( graphs$title ), size = 18 ) )
+                       legend = "top" 
+                       )
+  figure <- annotate_figure(figure, top = text_grob(trimws( graphs$title ), size = 18 ) )
+  
+  print(figure)
   
   }
 
 
-print_graphs( all_graphs_by_kind$population_structure)
-print_graphs( all_graphs_by_kind$expected_death_per_week)
-print_graphs( all_graphs_by_kind$cumulative_excess_death_per_year)
-print_graphs( all_graphs_by_kind$covid_cumulative_death )
-print_graphs( all_graphs_by_kind$excess_death_rate_2020 )
-print_graphs( all_graphs_by_kind$year_with_comparable_death_rate  )
-print_graphs( all_graphs_by_kind$year_with_comparable_excess_death_rate )
- 
+for ( graphs in all_graphs_by_kind ) {
+  print_graphs(graphs)
+}

@@ -1,0 +1,253 @@
+---
+title: "An analysis of excess mortality in 2020"
+author: "Gael Fraiteur"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 2
+    fig_width: 30
+    fig_height: 24
+    dev: "svg"
+    css: "layout.css"
+    theme: NULL
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+  word_document:
+    toc: yes
+    toc_depth: '2'
+---
+
+```{r setup, include=FALSE}
+library( ggpubr)
+# file.remove("all_countries.Rdata")
+if ( !file.exists("all_countries.Rdata")) {
+  source("all_countries.R", local = knitr::knit_global())
+  save.image("all_countries.Rdata")
+} else {
+  load("all_countries.Rdata")
+}
+
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
+
+```
+
+
+## Introduction
+
+The COVID19 epidemic has caused disruptions of our societies that have not been seen in Western Europe since World Ware II. However, it is still difficult to 
+understand how exceptional this epidemic actually is compared to historic mortality data. Is it a once-in-a-century event, or does it repeat every ten years?
+This article attempts to shed some light on these questions.
+
+Our approach is to compare the number of deaths in 2020 (for weeks for which mortality data is available) with the number of deaths that would be _expected_ based on 
+the structure of the population on January 1^st^, 2020 and on the usual death rates. The difference between expectations and reality
+gives us a metric named _excess deaths_ when it is positive, or _deaths deficit_ when it is negative.
+
+We compare this metric with the number of deaths attributed to COVID, and with historical death and mortality data.
+
+This article, as well as all R scripts that have been used to compute the data, are hosted on GitHub at https://github.com/gfraiteur/mortality.
+
+All data comes from open sources and can be freely downloaded. If you have a question or remark related to this article, 
+or if you have found a bug or inaccuracy, please open an issue on GitHub or, better, submit a pull request.
+
+## About the author
+
+Gael Fraiteur graduated from the Louvain School of Engineering in 2001 as a civil engineer in applied mathematics. He also holds two minor degrees
+in philosophy from UCLouvain. He has worked since then in the software industry. In 2004, he started an open-source project named PostSharp. In 2009, he founded a company
+to market and develop the product. As the CEO and principal engineer of PostSharp Technologies, the author now shares his time between R&D, management and marketing. 
+
+## Data sources
+
+* Population, death and death rates are sourced from https://www.mortality.org. The _demography_ R package is used
+  where possible, otherwise the data are downloaded from the CSV file.
+  
+* COVID19 data are downloaded from https://covid.ourworldindata.org.
+
+## Population structure
+
+Before we start analyzing excess mortality, it is interesting to visualize the structure of the population.
+
+```{r}
+print_graphs(all_graphs_by_kind$population_structure)
+```
+
+
+## Predictive model
+
+Our model of yearly mortality has two inputs:
+
+1. The structure of the population the 1^st^ of January of each year between 2009 and 2020 (i.e. the number of residents of a given age and sex alive on that day).
+
+2. The death rates for the corresponding age, sex and year, i.e. the probability that
+a person who was alive on January 1^st^ morning would be dead on December 31^st^ evening. 
+
+The predictive model is then built as follows:
+
+3. The expectation of yearly death count is the product of the number of inhabitants by the death rate for the given age and sex. This data aggregated by 5-year age groups.
+
+4. A histogram of distribution of the yearly mortality by week of year is computed by averaging the last years.
+
+3. The weekly mortality model is built by multiplying the yearly mortality model by the weekly distribution model.
+
+This process is described here below.
+
+
+### 1. Structure of the population
+
+The first input of our model is the structure of the population. The data set gives us the number of inhabitants of each sex who are alive and have a specific age on January 1^st^ of a given year. 
+
+When the population structure is not available until 2020,
+we use linear regressions, for each sex and age, to complete the missing years. The coefficients are computed based on the last
+5 years for which data are available. Typically only the last 1 or 2 years of data are missing, therefore a linear extrapolation
+(as opposed to the use of a more complex model such as Lee-Carter) is considered sufficient.
+
+### 2. Death rates
+
+The second input is the historical death rates for each age and sex. When a data point is missing for a given year, it is interpolated
+from the past and previous year for the given age and sex.
+
+The death rates are typically not known for 2019 and 2020, and in some cases for a few more past years. 
+
+We model the death rate with a linear regression for each age and sex. This model allows us to extrapolate
+the data to 2019 and 2020,  Note that the model does not use the empirical death rates, but only the linear regression
+itself. Thus approach removes the year-to-year variations for all previous years. That is, this
+death rate model removes the effect of epidemics and weather conditions that happen less frequently than yearly.
+
+
+### 3. Yearly mortality model
+
+Once we have a death rate model for each group and year, we multiply this coefficient by the actual (or extrapolated)
+population for this age group and year, which should give us the number of expected deaths. 
+
+However, the expected and observed number of deaths, summed from 2009 to 2019, don't match exactly. 
+This discrepancy is expected and its cause is not important. To cancel the discrepancy, we compute correction
+factors and apply them, for each sex and age group, so that the 10-year total matches exactly.
+
+The next graphs shows the yearly mortality model and compares it to empirical data:
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$expected_death_per_year)
+```
+
+### 4. Weekly mortality model
+
+We now have a yearly model, but we need weekly projections. For our weekly model, we first compute, for each sex and 
+age group, the percent of deaths that happens in a given week of the year, and we multiply this coefficient with the yearly 
+death rate for this year. Note that we applied a 3-week centered rolling mean to the data series before aggregating per week of year.
+
+To get the weekly mortality, we take the yearly mortality, the population structure as of January 1st of the year,
+and we multiply, for each age group and sex, by the week pattern.
+
+
+## Excess mortality
+
+Now that we have a predictive model, we can compare the actual mortality with the one that would be expected in a "normal"
+(neither good, neither bad) year.
+
+Where possible, the data is shown 
+from 2010 to make it possible to compare the mortality peaks of 2020 with those of recent years.
+
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$expected_death_per_week)
+```
+
+The following graphs are identical but focus on 2020:
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$expected_death_per_week_2020)
+```
+
+
+## Cumulative excess mortality
+
+It is also interesting to look at cumulative excess mortality over a long period of time. In most countries, there is a succession of 
+one of two good years followed by one or two bad years. These graphs allow us to visualize how, and how fast, good years
+compensate the bad ones, and to compare 2020 to previous bad years.
+
+In most epidemics and other events, the most vulnerable people tend to be the most affected. 
+These people would have died some time later from another cause. This phenomenon, when it exists, is visible on cumulative excess mortality graphs: the steepest is the slope _down_ after the epidemic peak, the less the lifetime of people was actually
+shortened by the event.
+
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$cumulative_excess_death_per_year)
+```
+
+
+## Mortality rates
+
+The _excess mortality rate in 2020_ is risk to which a person in given age group and sex was exposed compared to the expected
+rate if the year was "normal". For instance, a 2% mortality rate means that a person in that group had 2 out of 100 more "chances"
+to die in 2020 than in a normal year. 
+
+Note that the excess mortality rate for 2020 is computed from incomplete data.
+
+The following graphs shows the excess mortality rate in 2020:
+
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$excess_death_rate_2020)
+```
+
+
+The following graph compares the mortality rate in 2020 with the expected mortality rate. Since data from 2020 is incomplete,
+this rate is computed as being the expected yearly mortality rate for the whole 2020, plus the excess mortality rate
+computed for the period where data is available. 
+
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$compared_death_rate_2020)
+```
+
+
+## Mortality rates in historical context
+
+To interpret mortality rates, we need to compare them with other relevant mortality rates. Besides the geographic
+comparison, we can attempt a historical comparison and try to answer the question: how long do we have to
+look in the past to see similar mortality rates or excess mortality rates.
+
+### Comparison of absolute mortality rates
+
+The following graphs shows the historical mortality rates for different age groups and, on the same graph, a
+horizontal line showing the value of the mortality rate observed in 2020 (based on partial data). The intersection
+point of the horizontal line with the historical time series gives us the year in which the mortality observed in 2020
+was usual.
+
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$comparative_death_rate_F)
+print_graphs(all_graphs_by_kind$comparative_death_rate_M)
+```
+
+### Measure of exceptionality
+
+We want to have a sense of how exceptional a mortality rate or an excess mortality rate is. 
+
+To measure the degree of exceptionality of an event, we identify the last year when this event occurred, and we take the base-2 logarithm of the year difference.
+That means that an event occurring every year would have an exceptionality score of 0, and an event occurring every 16^th year would have a score of 3.
+
+Before computing the exceptionality score, we need to make sure that the event actually occurred. We do that by testing the hypothesis that the 
+mortality rate observed in 2020 is higher than mortality rate observed with 95% confidence. When the test fails, the exceptionality score is set to 0.
+
+For instance, suppose we want to compute the exceptionality score of having a mortality of 10% for an age group in 2020. If that mortality rate was 9% in 2019
+on a population count of 100,000 people, we first test that the difference is significant. Then we look at historical data and find that we have to go back to
+2004 to find a higher mortality rate. Therefore, the exceptionality score of this event is 3.
+
+
+### Comparison of absolute mortality rates
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$year_with_comparable_death_rate)
+```
+
+
+### Comparison of excess mortality rates
+
+The following graphs shows the exceptionality score of excess mortality rates. To estimate the excess mortality of past years, we simply make the difference
+between the mortality for the current year and the mean of the mortality for the next and the previous years.
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$year_with_comparable_excess_death_rate)
+```
+
