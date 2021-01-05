@@ -13,22 +13,30 @@ library(lme4)
 library(readxl)
 library(demography)
 
-if ( !exists("country")) {
-  stop("The 'country' variable is not defined.")
+if ( !exists("current_country_hmd_code")) {
+  stop("The 'current_country_hmd_code' variable is not defined.")
 }
 
 
 # Remove everything in the environment but not the data we downloaded from mortality.org.
 rm(
-  list= setdiff(ls(), c("hmd_mx", "hmd_pop", "country", "all_graphs", "selected_countries"))
+  list= setdiff(ls(), c("hmd_mx", "hmd_pop", "current_country_hmd_code", "all_graphs", "selected_countries", "all_excess_death_2020", "all_years_with_more_mortality"))
   )
 
 
 # Read countries
-countries <- read_csv("HMD-countries-codes.csv")
+countries = read_csv("HMD-countries-codes.csv", col_types = 
+                     cols(
+                       name = col_character(),
+                       code = col_character(),
+                       iso_code = col_character()
+                     )) %>%
+  mutate( iso_code = ifelse( is.na(iso_code), code, iso_code))
 
-country_name <- (countries %>% filter( code == country ))$name
-country_iso_code <- coalesce( (countries %>% filter( code == country ))$iso_code, country )
+names(countries) = c( "country_name","country_hmd_code", "country_iso_code")
+
+current_country_name <- (countries %>% filter( current_country_hmd_code == country_hmd_code ))$country_name
+current_country_iso_code <- (countries %>% filter( current_country_hmd_code == country_hmd_code ))$country_iso_code
 
 # Functions to work with graphs
 graphs <- list()
@@ -37,14 +45,24 @@ if ( !exists("all_graphs")) {
  all_graphs <- list() 
 }
 
+
 this_theme <- function(title) {
   if ( exists("max_week_2020")) {
     caption = sprintf( "Death data available until %d-th week of 2020", max_week_2020 )
   } else  {
     caption = NULL
   }
-  labs(title = title, subtitle = country_name, caption = caption) 
+  labs(title = title, subtitle = current_country_name, caption = caption) 
 }
+
+signed_sqrt_trans <- trans_new(
+  name = "signed sqrt",
+  trans = function(x) sign(x) * sqrt(abs(x)),
+  inverse = function(x) sign(x) * x * x,
+  breaks = breaks_extended()
+)
+
+signed_square <- function(x) sign(x) * x^2
 
 append_graph <- function(name) {
   graphs[[name]] <<- last_plot()
@@ -53,7 +71,7 @@ append_graph <- function(name) {
 source("passwords.R", local = TRUE )
 
 
-directory <- paste("./data/", country, sep = "")
+directory <- paste("./data/", current_country_hmd_code, sep = "")
 
 if (!dir.exists(directory))  {
   dir.create(directory)
@@ -71,12 +89,12 @@ weeks$date <- make_date( weeks$year ) + (weeks$week_of_year - 1) * 7
 
 has_hmd <- exists("hmd_pop") & exists("hmd_mx")
 if ( has_hmd ) {
-  has_hmd <- hmd_pop$label == country
+  has_hmd <- hmd_pop$label == current_country_hmd_code
 }
 
 if ( !has_hmd  ) {
-  hmd_pop <- hmd.pop(country, hmd_username, hmd_password)
-  hmd_mx <- hmd.mx(country, hmd_username, hmd_password)
+  hmd_pop <- hmd.pop(current_country_hmd_code, hmd_username, hmd_password)
+  hmd_mx <- hmd.mx(current_country_hmd_code, hmd_username, hmd_password)
 }
  
 
@@ -91,7 +109,7 @@ if ( !file.exists(death_filename_zip)){
 }
 
 death <-
-  read_csv(sprintf("data/%sstmf.csv", country), col_types = cols(
+  read_csv(sprintf("data/%sstmf.csv", current_country_hmd_code), col_types = cols(
       Year = col_integer(), 
       Week = col_integer() ))
 
@@ -165,10 +183,15 @@ if ( nrow(overlapping_age_group) > 0 ) {
 
 age <- sqldf( "select age,  age_group from age, age_group where age.age between age_group.age_min and age_group.age_max")
 
+
+death$week <- sprintf( "%i-W%02d", death$Year, death$Week )  
+
+
+
 max_week_2020 <- max( (death %>% filter(Year == 2020))$Week )
 
 
-death$week <- sprintf( "%i-W%02d", death$Year, death$Week )  
+
 
 death <- death %>%
   select( -Age, -AgeInterval, -Area, -Year, -Week, -age_min, -age_max ) %>%
@@ -604,7 +627,7 @@ excess_death_2020 %>%
   geom_point(aes()) +
   geom_line(aes()) +
   scale_y_log10(labels = scales::percent_format(accuracy = 0.1), name = "death rate (log10 scale)", limits = c(0.0005, 0.333))  +
-  scale_x_continuous(name = "age group") +
+  scale_x_continuous(name = "age group", breaks = seq(0,100,5), minor_breaks = FALSE) +
   this_theme( "Expected vs observed death rate 2020") 
 
 append_graph("compared_death_rate_2020")
@@ -618,10 +641,27 @@ excess_death_2020 %>%
   geom_point(aes()) +
   geom_line(aes()) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 0.1), name = "excess death rate", limits = c(-0.02, 0.05), breaks = seq(-0.02,0.05,0.01))  +
-  scale_x_continuous(name = "age group") +
+  scale_x_continuous(name = "age group", breaks = seq(0,100,5), minor_breaks = FALSE) +
   this_theme( "Excess death rate 2020") 
 
 append_graph("excess_death_rate_2020")
+
+excess_death_2020 %>%
+  merge( age_group ) %>%
+  group_by(age_min,sex) %>%
+  summarise(excess_death_rate = (sum(death_observed) / sum(expected_death)) -1  )  %>%
+  ggplot(aes(x=age_min, y=excess_death_rate, color=sex, fill = sex)) +
+  geom_point(aes()) +
+#  geom_line(aes()) +
+  geom_smooth() +
+  geom_hline(yintercept = 0) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), name = "relative excess death rate (square root scale)",
+                     limits = c(-1, 1.25), breaks = signed_square(seq(-1,2,0.1) ), trans = signed_sqrt_trans)  +
+  scale_x_continuous(name = "age group", breaks = seq(0,100,5), minor_breaks = FALSE) +
+  this_theme( "Relative excess death rate 2020") 
+
+
+append_graph("relative_excess_death_rate_2020")
 
 
 # Comparable years
@@ -720,7 +760,7 @@ covid_data <- read_csv("./data/owid-covid-data.csv",
 
 covid_death <-
   covid_data %>%
-  filter( iso_code == country_iso_code ) %>%
+  filter( iso_code == current_country_iso_code ) %>%
   select( date, new_deaths ) %>%
   rename( covid_death = new_deaths ) %>%
   mutate( week = sprintf("%d-W%02d", year(date), week(date)) ) %>%
@@ -770,5 +810,21 @@ death_expected_weekly %>%
 
 append_graph("covid_cumulative_death")
 
-all_graphs[[country]] <- graphs
+
+# All-country aggregations
+all_graphs[[current_country_hmd_code]] <- graphs
+
+excess_death_2020$country_hmd_code = current_country_hmd_code
+if ( !exists("all_excess_death_2020")) {
+  all_excess_death_2020 <- excess_death_2020
+} else {
+  all_excess_death_2020 <- rbind( all_excess_death_2020, excess_death_2020 )
+}
+
+years_with_more_mortality$country_hmd_code = current_country_hmd_code
+if ( !exists("all_years_with_more_mortality")) {
+  all_years_with_more_mortality <- years_with_more_mortality
+} else {
+  all_years_with_more_mortality <- rbind( all_years_with_more_mortality, years_with_more_mortality )
+}
 

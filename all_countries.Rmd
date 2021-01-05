@@ -175,7 +175,7 @@ print_graphs(all_graphs_by_kind$cumulative_excess_death_per_year)
 ```
 
 
-## Mortality rates
+## Mortality rates by age group
 
 The _excess mortality rate in 2020_ is risk to which a person in given age group and sex was exposed compared to the expected
 rate if the year was "normal". For instance, a 2% mortality rate means that a person in that group had 2 out of 100 more "chances"
@@ -188,6 +188,7 @@ The following graphs shows the excess mortality rate in 2020:
 
 ```{r warning=FALSE}
 print_graphs(all_graphs_by_kind$excess_death_rate_2020)
+print_graphs(all_graphs_by_kind$relative_excess_death_rate_2020)
 ```
 
 
@@ -251,3 +252,9 @@ between the mortality for the current year and the mean of the mortality for the
 print_graphs(all_graphs_by_kind$year_with_comparable_excess_death_rate)
 ```
 
+## Comparison with COVID19 mortality data
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$covid_death)
+print_graphs(all_graphs_by_kind$covid_cumulative_death)
+```
