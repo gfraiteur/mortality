@@ -1,11 +1,27 @@
-This repo provides an analysis of the excess mortality in 2020 in Belgium. It contains the source code of both the scripts and the
+This repo provides an analysis of the excess mortality in 2020 in most European countries. It contains the source code of both the scripts and the
 article, but not the data itself.
 
-* To read the article, go to the [rendered article](rendered/Belgium_en.md).
-* To edit the article, open [Belgium_en.Rmd](Belgium_en.Rmd).
-* The script that downloads the data and processes tham is [Belgium.R](Belgium.R). Note that you will need to
- create an account with the website https://www.mortality.org and download the file https://www.mortality.org/hmd/BEL/STATS/Mx_1x1.txt
- manually.
+* To read the article, go to the [rendered article](https://rpubs.com/gfraiteur/mortality).
+* To edit the article, open [all_countries.Rmd](all_countries.Rmd).
+
+
+## Running the scripts
+
+If you are interested in the scripts:
+
+* Create an account with the website https://www.mortality.org/. Create a file named _passwords.R_ with the following content:
+        ```
+        hmd_username = "your@email.com"
+        hmd_password = "******"
+        ```
+
+* The script that downloads the data and processes them is [generic.R](generic.R). You need to set the `current_country_hmd_code` variable to a valid
+HMD country code before running this script.
+
+* The top-level script is [all_countries.R](all_countries.R)
+
+
+## Reporting bugs
  
 This article and the scripts are open sources and the data sources are public. If you found errors, please
 [submit an issue](https://github.com/gfraiteur/mortality/issues) or, better, a pull request.

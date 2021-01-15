@@ -12,6 +12,7 @@ library(zoo)
 library(lme4)
 library(readxl)
 library(demography)
+library(ISOcodes )
 
 if ( !exists("current_country_hmd_code")) {
   stop("The 'current_country_hmd_code' variable is not defined.")
@@ -20,7 +21,7 @@ if ( !exists("current_country_hmd_code")) {
 
 # Remove everything in the environment but not the data we downloaded from mortality.org.
 rm(
-  list= setdiff(ls(), c("hmd_mx", "hmd_pop", "current_country_hmd_code", "all_graphs", "selected_countries", "all_excess_death_2020", "all_years_with_more_mortality"))
+  list= setdiff(ls(), c("hmd_mx", "hmd_pop", "current_country_hmd_code", "all_graphs", "selected_countries", "all_excess_death_2020", "all_years_with_more_mortality", "all_life_expectancy", "mobility"))
   )
 
 
@@ -35,8 +36,13 @@ countries = read_csv("HMD-countries-codes.csv", col_types =
 
 names(countries) = c( "country_name","country_hmd_code", "country_iso_code")
 
+countries = 
+  countries %>% 
+  merge( ISO_3166_1 %>% select( country_iso_code = Alpha_3, country_iso_code_2 = Alpha_2))
+
 current_country_name <- (countries %>% filter( current_country_hmd_code == country_hmd_code ))$country_name
 current_country_iso_code <- (countries %>% filter( current_country_hmd_code == country_hmd_code ))$country_iso_code
+current_country_iso_code_2 <- (countries %>% filter( current_country_hmd_code == country_hmd_code ))$country_iso_code_2
 
 # Functions to work with graphs
 graphs <- list()
@@ -48,7 +54,7 @@ if ( !exists("all_graphs")) {
 
 this_theme <- function(title) {
   if ( exists("max_week_2020")) {
-    caption = sprintf( "Death data available until %d-th week of 2020", max_week_2020 )
+    caption = sprintf( "Mortality data available until %d-th week of 2020", max_week_2020 )
   } else  {
     caption = NULL
   }
@@ -73,6 +79,9 @@ source("passwords.R", local = TRUE )
 
 directory <- paste("./data/", current_country_hmd_code, sep = "")
 
+if (!dir.exists("./data"))  {
+  dir.create("./data")
+}
 if (!dir.exists(directory))  {
   dir.create(directory)
 }
@@ -80,7 +89,7 @@ if (!dir.exists(directory))  {
 
 
 # Generate time dimension (years, weeks)
-weeks <- merge( 2005:2020,  1:52, all=TRUE )
+weeks <- merge( 2005:2021,  1:52, all=TRUE )
 names(weeks) <- c("year", "week_of_year")
 weeks$week <- sprintf( "%i-W%02d", weeks$year, weeks$week_of_year )
 weeks$date <- make_date( weeks$year ) + (weeks$week_of_year - 1) * 7
@@ -110,8 +119,11 @@ if ( !file.exists(death_filename_zip)){
 
 death <-
   read_csv(sprintf("data/%sstmf.csv", current_country_hmd_code), col_types = cols(
+      Age = col_integer(),
       Year = col_integer(), 
-      Week = col_integer() ))
+      Week = col_integer() ))  %>%
+  filter( !is.na(Week) & !is.na(Age))
+
 
 # If we have sex info, remove the data for 'both' gender.
 has_sex_category <- 'm' %in% death$Sex
@@ -125,7 +137,7 @@ if ( has_sex_category ) {
 
 
 death <- death %>%
-  filter( !is.na(as.integer(death$Age)) & Year >= 2009) %>%
+  filter( Year >= 2009) %>%
   select( -Type, -Access )
 
 age_end = 120
@@ -152,9 +164,24 @@ age_group <- death %>%
   arrange(age_min)
 
 # In some countries, we have coarse age groups for temporary data (last two or three weeks). 
-# We remove these groups and the corresponding data.
+# We remove these age groups and the deaths data of all affected weeks.
 temporary_age_groups = age_group %>% filter( year_count == 1 )
-death <- death %>% filter( !(age_group %in% temporary_age_groups$age_group ) )
+
+if ( current_country_hmd_code != "FRATNP" ) {
+  death_invalid_weeks = (death %>%
+    filter( age_group %in% temporary_age_groups$age_group ) %>% 
+    select(Week) %>%
+    distinct())$Week
+  
+  death_excluded_data = death %>% filter( (Week %in% death_invalid_weeks ) )
+  death = death %>% filter( !(Week %in% death_invalid_weeks ) )
+  
+} else {
+  # We don't do this in France because this would remove the age group 00-04,
+  # which will be handled by the overlapping_age_group logic below/
+}
+
+
 age_group <- age_group %>% filter( !(age_group %in% temporary_age_groups$age_group ) )
 
 
@@ -463,13 +490,13 @@ death_expected_yearly %>%
   filter(year <= 2019) %>%
   group_by(year) %>%
   summarise( death_expected_yearly = sum(death_expected_yearly), death_observed_yearly = sum(death_observed_yearly)) %>%
-  ggplot( aes(year, y = value)) + 
+  ggplot( aes(x = year, y = value)) + 
   geom_line(aes(y = death_expected_yearly,  color="expected")) + 
   geom_line(aes(y = death_observed_yearly,  color="real")) +
   this_theme("Expected vs observed number of deaths per year ") +
   scale_x_continuous(name = "year", breaks = 2009:2019, minor_breaks = FALSE, limits = c(2009,2019)) +
   scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE),
-                     limits = c(3900 * population_axis_scale, 6000 * population_axis_scale),
+                     limits = c(3000 * population_axis_scale, 7000 * population_axis_scale),
                      sec.axis = sec_axis( population_axis_transform, name = population_axis_name)) +
   theme(legend.title = element_blank()) 
 
@@ -555,7 +582,7 @@ death_expected_weekly %>%
   this_theme("Cumulative excess deaths") +
    theme(legend.title = element_blank()) +
   scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "excess deaths",
-                     limits = c(-250*population_axis_scale, 700 * population_axis_scale),
+                     limits = c(-400*population_axis_scale, 700 * population_axis_scale),
                      sec.axis = sec_axis( population_axis_transform, name = population_axis_name))
 
 append_graph("cumulative_excess_death_per_year")
@@ -594,6 +621,30 @@ excess_death_2020$excess_death_signicant = unlist(Map(function(x,n,p) prop.test(
                                        n = excess_death_2020$population_count, 
                                        p = excess_death_2020$expected_death_rate))
 
+# Comparable years
+
+years_with_more_mortality <-
+  excess_death_2020 %>%
+  select( age_group, sex, observed_yearly_death_rate, excess_death_signicant) %>%
+  rename( death_rate_2020 = observed_yearly_death_rate ) %>%
+  merge( mortality_by_age_group ) %>%
+  filter( mortality > death_rate_2020 ) %>%
+  group_by( age_group, sex, excess_death_signicant ) %>%
+  summarise( last_year_equivalent_death_rate = max(year)) %>%
+  ungroup() %>%
+  mutate( death_rate_regression = ifelse( !excess_death_signicant, 0, 2020-last_year_equivalent_death_rate) )
+
+
+years_with_more_mortality %>%
+  ggplot(aes(x=age_group, y= death_rate_regression, fill = sex)) +
+  geom_bar(stat="identity",position = position_dodge2(preserve = "single"))  +
+  scale_y_sqrt(name = "number of years of regression (square root scale)",  limits = c(0,100), breaks= c( 1, seq(0,10,2), seq(15,50,5), seq(50,100,10) ) , minor_breaks = FALSE,
+               sec.axis = sec_axis( trans = function(y) 2020-y, breaks= 2020 - c( 1, seq(0,10,2), seq(15,50,5), seq(50,100,10) ), name = "equivalent year" )  )  +
+  this_theme( "Exceptionality of the 2020 absolute mortality rates") 
+
+
+append_graph("year_with_comparable_death_rate")
+
 
 # Graphs 
 for ( s in sex) {
@@ -602,9 +653,14 @@ for ( s in sex) {
       filter( age_group >= "50" & sex == s & year >= 2000) %>%
       ggplot( aes( x = year, y = mortality, color = age_group) ) +
       geom_line( ) +
-      geom_point(data = excess_death_2020 %>% filter( age_group >= "50" & sex == s), aes( x = 2020, y = observed_yearly_death_rate, color =age_group)) +
-      geom_hline(data = excess_death_2020 %>% filter( age_group >= "50" & sex == s), aes( yintercept = observed_yearly_death_rate, color =age_group), linetype="dashed") +
-      geom_text(data = excess_death_2020 %>% filter( age_group >= "50" & sex == s), aes( color = age_group, x = 2019.5, y = observed_yearly_death_rate*1.15, label=age_group)) +
+      geom_point(data = excess_death_2020 %>% filter( age_group >= "50" & sex == s), 
+                 aes( x = 2020, y = observed_yearly_death_rate, color =age_group)) +
+      geom_point(data = merge(excess_death_2020,years_with_more_mortality) %>% filter( age_group >= "50" & sex == s), 
+                 aes( x = last_year_equivalent_death_rate, y = observed_yearly_death_rate, color =age_group)) +
+      geom_hline(data = excess_death_2020 %>% filter( age_group >= "50" & sex == s), 
+                 aes( yintercept = observed_yearly_death_rate, color =age_group), linetype="dashed") +
+      geom_text(data = excess_death_2020 %>% filter( age_group >= "50" & sex == s),
+                aes( color = age_group, x = 2019.5, y = observed_yearly_death_rate*1.15, label=age_group)) +
       scale_color_discrete() +
       scale_x_continuous(name = "year", limit=c(2000,2020), breaks=2000:2020, minor_breaks = NULL) +
       scale_y_log10(labels = scales::percent_format(accuracy = 0.1), name = "death rate (log10 scale)", limits = c(0.001, 0.4))  +
@@ -640,7 +696,7 @@ excess_death_2020 %>%
   ggplot(aes(x=age_min, y=excess_death_rate, color=sex)) +
   geom_point(aes()) +
   geom_line(aes()) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1), name = "excess death rate", limits = c(-0.02, 0.05), breaks = seq(-0.02,0.05,0.01))  +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1), name = "excess death rate", limits = c(-0.03, 0.07), breaks = seq(-0.02,0.08,0.01))  +
   scale_x_continuous(name = "age group", breaks = seq(0,100,5), minor_breaks = FALSE) +
   this_theme( "Excess death rate 2020") 
 
@@ -652,8 +708,7 @@ excess_death_2020 %>%
   summarise(excess_death_rate = (sum(death_observed) / sum(expected_death)) -1  )  %>%
   ggplot(aes(x=age_min, y=excess_death_rate, color=sex, fill = sex)) +
   geom_point(aes()) +
-#  geom_line(aes()) +
-  geom_smooth() +
+  geom_smooth(se=FALSE) +
   geom_hline(yintercept = 0) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1), name = "relative excess death rate (square root scale)",
                      limits = c(-1, 1.25), breaks = signed_square(seq(-1,2,0.1) ), trans = signed_sqrt_trans)  +
@@ -663,30 +718,28 @@ excess_death_2020 %>%
 
 append_graph("relative_excess_death_rate_2020")
 
-
-# Comparable years
-
-years_with_more_mortality <-
-  excess_death_2020 %>%
-  select( age_group, sex, observed_yearly_death_rate, excess_death_signicant) %>%
-  rename( death_rate_2020 = observed_yearly_death_rate ) %>%
-  merge( mortality_by_age_group ) %>%
-  filter( mortality > death_rate_2020 ) %>%
-  group_by( age_group, sex, excess_death_signicant ) %>%
-  summarise( last_year_equivalent_death_rate = max(year)) %>%
-  ungroup() %>%
-  mutate( death_rate_exceptionality = ifelse( !excess_death_signicant, 0, log(2020-last_year_equivalent_death_rate, base = 2)) )
+life_expectancy = data.frame( age = (age %>% filter(age <= 100))$age ) %>% merge( c("male", "female")) %>% rename( sex = y )
+life_expectancy$life_expectancy = unlist(Map(function(a,s) flife.expectancy(hmd_mx, series = s, years = c(mortality_max_year), age = a,  PI = TRUE)[1], a = life_expectancy$age, s =  life_expectancy$sex))
+life_expectancy = life_expectancy %>% merge( age %>% merge( c("male", "female")) %>% rename( sex = y ), all.y = TRUE)
+life_expectancy[is.na(life_expectancy)] = 2
+life_expectancy$sex = ifelse( life_expectancy$sex == "male", "M", "F")
 
 
-years_with_more_mortality %>%
-#  filter( age_group >= "40") %>%
-  ggplot(aes(x=age_group, y= death_rate_exceptionality, fill = sex)) +
-  geom_bar(stat="identity",position = position_dodge2(preserve = "single"))  +
-  scale_y_continuous(name = "exceptionality",  limits = c(0,5), minor_breaks = FALSE)  +
-  this_theme( "Exceptionality of the 2020 absolute mortality rates") 
+life_expectancy %>%
+  group_by( sex, age_group ) %>%
+  summarise( life_expectancy = mean(life_expectancy)) %>%
+  merge(excess_death_2020) %>%
+  mutate( lost_days = 365 * excess_death * life_expectancy / population_count) %>%
+  merge( age_group ) %>%
+  ggplot( aes(x=age_min, y=lost_days, color=sex, fill = sex)) +
+    geom_point() +
+    geom_smooth(se=FALSE, span = 0.5, method = "loess" ) +
+    this_theme( "Number of lost days of life expectancy per person according to age group")  +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "days",
+                     limits = c(-20, 70))
+  
+append_graph("lost_life_expectancy")
 
-
-append_graph("year_with_comparable_death_rate")
 
 
 ### MORTALITY VARIANCE
@@ -711,16 +764,16 @@ years_with_more_mortality <-
     group_by( age_group, sex, excess_death_signicant ) %>%
     summarise( last_year_equivalent_excess_death_rate = max(year))  %>%
     ungroup() %>%
-    mutate( excess_death_rate_exceptionality = ifelse( !excess_death_signicant, 0,  log(2020-last_year_equivalent_excess_death_rate, base = 2))) %>%
+    mutate( excess_death_rate_regression = ifelse( !excess_death_signicant, 0,  2020-last_year_equivalent_excess_death_rate)) %>%
     merge( years_with_more_mortality )
 
 
 
 years_with_more_mortality %>%
-#  filter( age_group >= "40") %>%
-  ggplot(aes(x=age_group, y=excess_death_rate_exceptionality, fill = sex)) +
+  ggplot(aes(x=age_group, y=excess_death_rate_regression, fill = sex)) +
   geom_bar(stat="identity", position = position_dodge2(preserve = "single"))  +
-  scale_y_continuous(name = "exceptionality",  limits = c(0,7), breaks = 1:7,  minor_breaks = FALSE)  +
+  scale_y_sqrt(name = "number of years of regression (square root scale)",  limits = c(0,100), breaks= c( 1, seq(0,10,2), seq(15,50,5), seq(50,100,10) ) , minor_breaks = FALSE,
+               sec.axis = sec_axis( trans = function(y) 2020-y, breaks= 2020 - c( 1, seq(0,10,2), seq(15,50,5), seq(50,100,10) ), name = "equivalent year" )  )  +
   this_theme( "Exceptionality of the 2020 excess mortality rates")
 
 append_graph("year_with_comparable_excess_death_rate")
@@ -811,6 +864,113 @@ death_expected_weekly %>%
 append_graph("covid_cumulative_death")
 
 
+
+###  Covid-19 government response stringency index
+
+if ( !file.exists("./data/OxCGRT_latest.csv")) {
+  download.file("https://github.com/OxCGRT/covid-policy-tracker/raw/master/data/OxCGRT_latest.csv", "./data/OxCGRT_latest.csv")
+}
+
+restrictions <- read_csv("data/OxCGRT_latest.csv", 
+                         col_types = cols(CountryName = col_skip(), 
+                                          RegionName = col_skip(), RegionCode = col_skip(), 
+                                          Jurisdiction = col_skip(), Date = col_integer()))
+
+restrictions = restrictions %>%
+  merge( countries, by.x = c("CountryCode"), by.y = c("country_iso_code"), suffixes = c("","") ) %>%
+  rename( country_iso_code = CountryCode ) %>%
+  mutate( year = floor(Date/10000), month = floor( ( Date %% 10000 ) / 100  ), day = Date %% 100 ) %>% 
+  mutate( date = make_date( year, month, day)) %>% select( -Date, -year, -month, -day) %>%
+  complete( country_iso_code, date )
+
+
+restrictions %>%  
+  filter( country_hmd_code == current_country_hmd_code ) %>%
+  ggplot(aes(x=date, y=StringencyIndex, color = country_iso_code )) +
+  geom_line() +
+    scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "date", limits = c(as.Date("2020-03-01"), as.Date("2020-12-31"))) +
+    scale_y_continuous(limits = c(0, 100)) +
+    this_theme( "Government response stringency")
+  
+append_graph("stringency")
+
+
+## Google mobility data
+if (!exists("mobility")) {
+  if ( !file.exists("./data/Global_Mobility_Report.csv")){
+    download.file("https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv", "./data/Global_Mobility_Report.csv")
+  }
+  mobility <- read_csv("data/Global_Mobility_Report.csv", 
+                       col_types = cols(country_region = col_skip(), 
+                                        #sub_region_1 = col_skip(), 
+                                        sub_region_2 = col_skip(), 
+                                        metro_area = col_skip(), iso_3166_2_code = col_skip(), 
+                                        census_fips_code = col_skip()))  %>%
+            filter( is.na(sub_region_1) ) %>%
+            rename(  retail_and_recreation = retail_and_recreation_percent_change_from_baseline,
+                     grocery_and_pharmacy = grocery_and_pharmacy_percent_change_from_baseline,
+                     transit_stations = transit_stations_percent_change_from_baseline,
+                     workplaces = workplaces_percent_change_from_baseline,
+                     residential = residential_percent_change_from_baseline,
+                     parks = parks_percent_change_from_baseline) %>%
+            mutate(  week = make_date(year(date)) + 7* week(date))  %>%
+            group_by( week, country_region_code ) %>%
+            select( -date ) %>%
+            rename( date = week, country_iso_code_2 = country_region_code ) %>%
+            summarise( retail_and_recreation = mean(retail_and_recreation, na.rm = TRUE ),
+                         grocery_and_pharmacy = mean(grocery_and_pharmacy, na.rm = TRUE ),
+                         transit_stations = mean(transit_stations, na.rm = TRUE ),
+                         workplaces = mean(workplaces, na.rm = TRUE ),
+                       residential = mean(residential, na.rm = TRUE ) ,
+                       parks = mean(parks, na.rm = TRUE ) 
+                       ) %>%
+              ungroup()
+              
+              
+}
+
+mobility %>% 
+  filter ( country_iso_code_2 == current_country_iso_code_2 ) %>%
+  select( date, workplaces, transit_stations, retail_and_recreation ) %>%
+  melt("date") %>%
+  ggplot(aes(x=date, y = value, color = variable ))  +
+    geom_line() +
+    scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "date", limits = c(as.Date("2020-03-01"), as.Date("2020-12-31"))) +
+    scale_y_continuous(limits = c(NA, NA), name = "percent changes from baseline") +
+    this_theme( "Mobility index by Google") 
+
+
+
+append_graph("mobility")
+
+mobility %>% 
+  filter ( country_iso_code_2 == current_country_iso_code_2 ) %>%
+  merge( restrictions %>% filter( country_hmd_code == current_country_hmd_code ) ) %>%
+  merge( 
+    death_expected_weekly %>%
+      group_by( date ) %>%
+      summarise( excess_death = sum(excess_death), death_expected = sum(death_expected)) %>%
+      mutate( mortality_increase = 100 * (excess_death /  death_expected)  ),
+      all = TRUE
+    ) %>%
+  mutate( mobility_decrease = -(workplaces + transit_stations + retail_and_recreation) / 3 ) %>%
+  mutate( retail_and_recreation_decrease = -retail_and_recreation ) %>%
+  select( date, StringencyIndex,  mobility_decrease, mortality_increase ) %>%
+  rename( government_stringency_index = StringencyIndex ) %>%
+  melt("date") %>%
+    ggplot(aes(x=date, y = value, color = variable ))  +
+    geom_line() +
+    guides(linetype = FALSE)  +
+    scale_y_continuous(limits = c(-100, 160), name = "") +
+    scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "date", limits = c(as.Date("2020-03-01"), as.Date("2020-12-31"))) +
+    this_theme( "Government restrictions with effect on reduction of mobility") 
+  
+
+  
+  
+append_graph("restrictions_mobility")
+
+
 # All-country aggregations
 all_graphs[[current_country_hmd_code]] <- graphs
 
@@ -822,9 +982,17 @@ if ( !exists("all_excess_death_2020")) {
 }
 
 years_with_more_mortality$country_hmd_code = current_country_hmd_code
+
 if ( !exists("all_years_with_more_mortality")) {
   all_years_with_more_mortality <- years_with_more_mortality
 } else {
   all_years_with_more_mortality <- rbind( all_years_with_more_mortality, years_with_more_mortality )
+}
+
+life_expectancy$country_hmd_code = current_country_hmd_code
+if ( !exists("all_life_expectancy")) {
+  all_life_expectancy <- life_expectancy
+} else {
+  all_life_expectancy <- rbind( all_life_expectancy, life_expectancy )
 }
 
