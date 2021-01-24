@@ -39,8 +39,6 @@ vignettes/*.pdf
 .Renviron
 data/
 *.docx
-*.html
 rsconnect/
 *.Rdata
-all_countries_files/
 passwords.R

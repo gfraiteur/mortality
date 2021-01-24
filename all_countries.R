@@ -1,4 +1,5 @@
 library(ggpubr)
+library(GGally)
 
 selected_countries = c( "ESP", "BEL", "POL", "NLD", "ITA", "CZE", "FRATNP", "CHE", "DNK", "DEUTNP", "FIN", "SWE", "GRC", "HUN", "HRV", "EST", "SVN" )
 
@@ -6,10 +7,12 @@ if ( exists("all_graphs")) rm( all_graphs )
 if ( exists("all_excess_death_2020")) rm( all_excess_death_2020 )
 if ( exists("all_years_with_more_mortality")) rm( all_years_with_more_mortality )
 if ( exists("all_life_expactancy")) rm( all_life_expactancy )
+if ( exists("all_covid_death")) rm( all_covid_death )
+if ( exists("all_death_expected_weekly")) rm( all_death_expected_weekly )
 
 
 for ( current_country_hmd_code in selected_countries ) {
-  source("generic.R")
+  source("country.R")
 }
 
 selected_countries_sorted = 
@@ -74,7 +77,7 @@ all_excess_death_2020 %>%
   scale_x_continuous(name = "age group", breaks = seq(0,100,5), minor_breaks = FALSE) +
   labs( title = "Relative excess death rate 2020 (all countries)") 
 
-country_exceptionality = 
+all_death_score = 
   all_years_with_more_mortality %>%
     group_by( country_hmd_code ) %>%
     summarise( excess_death_rate_regression = mean(excess_death_rate_regression), 
@@ -88,23 +91,24 @@ country_exceptionality =
           max_death_rate_regression = max(death_rate_regression),
           max_death_increase = max(death_increase)) %>%
   ungroup() %>%
-  mutate( excess_death_rate_regression = excess_death_rate_regression / max_excess_death_rate_regression,
-          death_rate_regression =  death_rate_regression / max_death_rate_regression,
-          death_increase =  death_increase / max_death_increase ) %>%
-  mutate( total_score = excess_death_rate_regression + 
-            death_rate_regression + 
-            death_increase  ) %>%
-  arrange( total_score ) 
+  mutate( normalized_excess_death_rate_regression = excess_death_rate_regression / max_excess_death_rate_regression,
+          normalized_death_rate_regression =  death_rate_regression / max_death_rate_regression,
+          normalized_death_increase =  death_increase / max_death_increase ) %>%
+  mutate( total_score = normalized_excess_death_rate_regression + 
+            normalized_death_rate_regression + 
+            normalized_death_increase  ) %>%
+  arrange( total_score ) %>%
+  select( -max_excess_death_rate_regression, -max_death_rate_regression, -max_death_increase)
   
 
 
 
-country_exceptionality %>%
-  select(country_hmd_code, death_rate_regression,  excess_death_rate_regression, death_increase ) %>%
+all_death_score %>%
+  select(country_hmd_code, normalized_death_rate_regression,  normalized_excess_death_rate_regression, normalized_death_increase ) %>%
   melt() %>%
     ggplot(aes(x=country_hmd_code, y=value, fill=variable)) +
     geom_col(position=position_stack())  +
-    scale_x_discrete(limits=country_exceptionality$country_hmd_code)
+    scale_x_discrete(limits=all_death_score$country_hmd_code)
 
 
 
@@ -113,14 +117,13 @@ all_life_expectancy %>%
   group_by( sex, age_group, country_hmd_code ) %>%
   summarise( life_expectancy = mean(life_expectancy)) %>%
   merge(all_excess_death_2020) %>%
-  mutate( lost_years = excess_death * life_expectancy) %>%
+  mutate( lost_years = excess_death * life_expectancy / population_count ) %>%
   merge( age_group ) %>%
   ggplot( aes(x=age_min, y=lost_years, color=sex, fill = sex)) +
-  geom_point() +
-  geom_smooth() +
+#  geom_point() +
+  geom_boxplot(aes(x=reorder(age_min,sex))) +
   this_theme( "Number of lost years of life expectancy")  +
   scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "years",
-                     limits = c(-1200*population_axis_scale, 1200 * population_axis_scale),
                      sec.axis = sec_axis( population_axis_transform, name = population_axis_name))
 
 
@@ -150,49 +153,155 @@ mobility_summary =
              residential = mean(residential))
 
 
-# Mortality by stringency index
+# Mortality regression by stringency index (most significant correlation)
 restriction_summary %>%
-  merge(country_exceptionality) %>%
-  ggplot(aes(x=total_score, y=stringency, label = country_iso_code )) +
+  merge(all_death_score) %>%
+  ggplot(aes(x=death_rate_regression, y=stringency, label = country_iso_code )) +
   geom_point() +
-  geom_label( color = "blue", nudge_x = -0.5, nudge_y = 1 ) +
-  xlab("excess mortality score") + ylab("stringency score") 
+  geom_label( color = "blue", nudge_x = -0.1, nudge_y = 1 ) +
+  xlab("mortality rate regression (years)") + ylab("government stringency") 
 
 # Mortality by containment health index
 restriction_summary %>%
-  merge(country_exceptionality) %>%
-  ggplot(aes(x=total_score, y=containment_health, label = country_iso_code )) +
+  merge(all_death_score) %>%
+  ggplot(aes(x=death_increase, y=containment_health, label = country_iso_code )) +
   geom_point() +
-  geom_label( color = "blue", nudge_x = -0.5, nudge_y = 1 ) +
-  xlab("excess mortality score") + ylab("containment index") 
+  geom_label( color = "blue", nudge_x = -0.005, nudge_y = 1 ) +
+  xlab("excess mortality (%)") + ylab("containment index") 
 
 
 mobility_summary %>%
   merge( countries ) %>%
-  merge(country_exceptionality) %>%
+  merge(all_death_score) %>%
   ggplot(aes(x=death_increase, y=retail_and_recreation, label = country_iso_code )) +
   geom_point() +
   geom_label( color = "blue", nudge_x = -0.005, nudge_y = 1.5, alpha = 0.5 ) +
-  geom_smooth( method = "lm", se = FALSE) +
   xlab("excess mortality score") + ylab("mobility decrease") 
 
 
-# Correlation between death rate and mobility indexes
-model_death_rate =
-  aov( death_rate_regression ~ retail_and_recreation + transit_stations + workplaces + parks + residential, 
-       mobility_summary %>%
-          merge( countries ) %>%
-          merge(country_exceptionality)
-         ) 
-  
-model_excess_death_rate =
-  aov( excess_death_rate_regression ~ retail_and_recreation + transit_stations + workplaces, 
-       mobility_summary %>%
-         merge( countries ) %>%
-         merge(country_exceptionality)
-  ) 
+# Mortality by age groups
 
+all_mortality_by_age_supergroup =
+  all_death_expected_weekly %>%
+    filter( date > as.Date("2020-03-01") & date < as.Date("2020-07-01")) %>%
+    merge(age_group) %>%
+    group_by( country_hmd_code, age_supergroup ) %>%
+    summarise( excess_death_percent =  (sum(death_observed) / sum(death_expected)) - 1 )
+
+all_mortality_by_age_supergroup %>%
+  merge(countries) %>%
+  ggplot( aes(x=country_name, y=excess_death_percent, fill=age_supergroup)) +
+  geom_col( position = "dodge") +
+  coord_flip() 
+
+
+
+
+all_mortality_by_age_supergroup_dcast =
+  all_mortality_by_age_supergroup %>%
+    dcast( country_hmd_code ~ age_supergroup, value.var="excess_death_percent" ) %>%
+    rename ( excess_death_infant = "00-04",
+             excess_death_youth = "05-19",
+             excess_death_active = "20-64", 
+             excess_death_retired = "65-84",
+             excess_death_elder = "85+")
+
+all_mortality_by_age_supergroup %>%
+  merge( countries ) %>%
+  merge(mobility_summary) %>%
+  merge( all_covid_death %>% 
+           filter( country_iso_code %in% selected_countries_info$country_iso_code) %>% 
+           group_by( country_iso_code) %>% 
+           summarise(covid_death_count=sum(covid_death))) %>%
+          merge(
+            all_death_expected_weekly %>%
+              filter( year == 2020 ) %>%
+              group_by( country_hmd_code ) %>%
+              summarise( death_expected = sum(death_expected))
+          ) %>%
+  merge( all_years_with_more_mortality  %>%
+           merge(age_group) %>%
+           group_by(country_hmd_code, age_supergroup ) %>%
+           summarise( death_rate_regression = mean(death_rate_regression),
+                      excess_death_rate_regression = mean(excess_death_rate_regression) )
+         ) %>%
+  filter( age_supergroup >= "65") %>%
+  mutate( covid_death_percent = covid_death_count / death_expected ) %>%
+  select(-country_hmd_code, -country_iso_code_2, -country_iso_code, -country_name, -covid_death_count, -death_expected ) %>%
+  ggpairs ( ggplot2::aes(colour=age_supergroup, alpha = 0.5)  )
+  
+
+
+
+all_youth_mortality_by_sex =
+  all_excess_death_2020 %>%
+    filter( age_group >= "10" & age_group <= "15-19") %>%
+    group_by( country_hmd_code, sex) %>%
+    summarise( excess_death_percent = sum(excess_death) / sum(expected_death)) %>%
+  arrange(excess_death_percent)
+
+all_youth_mortality =
+all_youth_mortality_by_sex %>% 
+    group_by(country_hmd_code) %>% 
+    summarise( excess_death_percent=mean(excess_death_percent)) %>%
+    arrange(excess_death_percent)
+
+
+all_youth_mortality_by_sex %>%
+  ggplot(aes(x=country_hmd_code, y=excess_death_percent, fill = sex )) +
+    geom_col( position = "dodge") +
+   scale_x_discrete(limits=all_youth_mortality$country_hmd_code)
+
+
+
+mobility_summary %>%
+  merge( countries ) %>%
+  merge(all_youth_mortality) %>%
+  ggplot(aes(x=excess_death_percent, y=residential, label = country_iso_code )) +
+  geom_point() +
+  geom_label( color = "blue", nudge_x = -0.005, nudge_y = 1.5, alpha = 0.5 ) +
+  xlab("excess youth mortality") + ylab("residential") 
+
+
+
+restriction_summary %>%
+  merge( countries ) %>%
+  merge(all_youth_mortality) %>%
+  ggplot(aes(x=excess_death_percent, y=stringency, label = country_iso_code )) +
+  geom_point() +
+  geom_label( color = "blue", nudge_x = -0.005, nudge_y = 1.5, alpha = 0.5 ) +
+  xlab("excess youth mortality") + ylab("stringency") 
+
+
+
+# Latency between excess mortality peak and stringency index
+
+# 
+# country_peaks =
+#   restrictions %>%
+#     filter( country_hmd_code %in% selected_countries & StringencyIndex >= 60) %>%
+#     group_by( country_hmd_code ) %>%
+#     summarise( restriction_date = min(date), max_restrictions = max(StringencyIndex)) %>%
+#     merge(
+#       TODO
+#       ) %>%
+#     merge( countries ) %>%
+#     merge( 
+#       all_covid_death %>%
+#         filter( country_iso_code %in% selected_countries_info$country_iso_code) %>%
+#         merge(weeks) %>%
+#         filter( date > as.Date("2020-03-01") & date < as.Date("2020-07-01")) %>%
+#         group_by( country_iso_code ) %>%
+#         summarise( death_peak_date = date[which.max(covid_death)] )
+#       ) %>%
+#     mutate( death_peak_delay = as.integer( death_peak_date - restriction_date ) ) 
+# 
+# 
+# country_peaks %>%
+#   merge(all_death_score) %>%
+#   select( max_restrictions, death_peak_delay, death_rate_regression, excess_death_infant, excess_death_youth,excess_death_active,  excess_death_retired,excess_death_elder  ) %>%
+#   ggpairs(  )
+# 
 
 
 save.image("all_countries.Rdata")
-

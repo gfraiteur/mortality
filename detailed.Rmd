@@ -1,0 +1,336 @@
+---
+title: "An analysis of excess mortality in 2020 in European countries"
+author: "Gael Fraiteur"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 2
+    fig_width: 30
+    fig_height: 30
+    dev: "svg"
+    css: "layout.css"
+    theme: NULL
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+  word_document:
+    toc: yes
+    toc_depth: '2'
+---
+
+```{r setup, include=FALSE}
+library(ggpubr)
+library(dplyr)
+# file.remove("all_countries.Rdata")
+if ( !file.exists("all_countries.Rdata")) {
+  source("all_countries.R", local = knitr::knit_global())
+} else {
+  load("all_countries.Rdata")
+}
+
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
+
+```
+
+
+## Introduction
+
+This data analysis tries to shed light on a few controversial questions regarding the COVID19 epidemics and the governemental restrictions on freedom
+of movement and association. It is based on demographic data instead of the usual COVID19 mortality data reported daily by the mainstream press. 
+
+My approach is to compare the number of deaths in 2020 (for weeks for which mortality data is available) with the number of deaths that would be _expected_ based on 
+the structure of the population on January 1^st^, 2020 and on the usual death rates. The difference between expectations and reality
+gives us a metric named _excess deaths_ when it is positive, or _deaths deficit_ when it is negative.
+
+Unlike COVID19 mortality data, demographic data are:
+
+* Slow: demographic data is published after 2 to 8 weeks according to countries.
+* Reliable and verified: demographic data is based on death certificates.
+* Historical, therefore comparable: states have been collecting demographic data for several decades -- more than a century for most European states. 
+* Non-ambiguous: the diagnostic is easier: a person is either dead or alive.
+
+### Countries
+
+This analysis include data from the following countries:
+
+```{r}
+selected_countries_sorted %>%
+  merge( countries ) %>% 
+  select( country_name) %>% 
+  arrange( country_name ) %>%
+ knitr::kable( col.names = c("Country"), 
+             #   caption = "Countries included in this analysis", 
+                format = "markdown",
+                format.args = list(decimal.mark = ",", big.mark = "'"))
+
+```
+
+The graphs have been scaled so that they can be compared between countries. The scale has been normalized based on the number of inhabitants aged 65 or more.
+However, any comparison between should still be taken with care. The most significant different for most graphs is that the availability
+of data for the lastest weeks vary between countries. 
+
+
+### Open sources
+
+This article, as well as all R scripts that have been used to compute the data, are hosted on GitHub at https://github.com/gfraiteur/mortality.
+If you have a question or remark related to this article, or if you have found a bug or inaccuracy, please open an issue on GitHub or, better, submit a pull request.
+
+All data comes from open sources and can be freely downloaded.
+
+* Population, death and death rates are sourced from the [Human Mortality Database](https://www.mortality.org). The _demography_ R package is usedwhere possible, otherwise the data are downloaded from the CSV file.
+  
+* COVID19 mortality is downloaded from [Our World in Data](https://covid.ourworldindata.org).
+
+* Mobility data provided by [Google COVID-19 Community Mobility Reports](https://www.google.com/covid19/mobility/).
+
+* Government restriction data are from the [Oxford Covid-19 Government Response Tracker](https://github.com/OxCGRT/covid-policy-tracker).
+
+
+
+### About the author
+
+Gael Fraiteur graduated from the Louvain School of Engineering in 2001 as a civil engineer in applied mathematics. He also holds two minor degrees
+in philosophy from UCLouvain. He has worked since then in the software industry. In 2004, he started an open-source project named PostSharp. In 2009, he founded a company
+to market and develop the product. As the CEO and principal engineer of PostSharp Technologies, the author now shares his time between R&D, management and marketing. 
+
+## Population structure
+
+Before we start analyzing excess mortality, it is interesting to visualize the structure of the population.
+
+```{r}
+print_graphs(all_graphs_by_kind$population_structure)
+```
+
+
+## Predictive model
+
+Our model of yearly mortality has two inputs:
+
+1. The structure of the population the 1^st^ of January of each year between 2009 and 2020 (i.e. the number of residents of a given age and sex alive on that day).
+
+2. The death rates for the corresponding age, sex and year, i.e. the probability that
+a person who was alive on January 1^st^ morning would be dead on December 31^st^ evening. 
+
+The predictive model is then built as follows:
+
+3. The expectation of yearly death count is the product of the number of inhabitants by the death rate for the given age and sex. This data aggregated by 5-year age groups.
+
+4. A histogram of distribution of the yearly mortality by week of year is computed by averaging the last years.
+
+3. The weekly mortality model is built by multiplying the yearly mortality model by the weekly distribution model.
+
+This process is described here below.
+
+
+### 1. Structure of the population
+
+The first input of our model is the structure of the population. The data set gives us the number of inhabitants of each sex who are alive and have a specific age on January 1^st^ of a given year. 
+
+When the population structure is not available until 2020,
+we use linear regressions, for each sex and age, to complete the missing years. The coefficients are computed based on the last
+5 years for which data are available. Typically only the last 1 or 2 years of data are missing, therefore a linear extrapolation
+(as opposed to the use of a more complex model such as Lee-Carter) is considered sufficient.
+
+### 2. Death rates
+
+The second input is the historical death rates for each age and sex. When a data point is missing for a given year, it is interpolated
+from the past and previous year for the given age and sex.
+
+The death rates are typically not known for 2019 and 2020, and in some cases for a few more past years. 
+
+We model the death rate with a linear regression for each age and sex. This model allows us to extrapolate
+the data to 2019 and 2020,  Note that the model does not use the empirical death rates, but only the linear regression
+itself. Thus approach removes the year-to-year variations for all previous years. That is, this
+death rate model removes the effect of epidemics and weather conditions that happen less frequently than yearly.
+
+
+### 3. Yearly mortality model
+
+Once we have a death rate model for each group and year, we multiply this coefficient by the actual (or extrapolated)
+population for this age group and year, which should give us the number of expected deaths. 
+
+However, the expected and observed number of deaths, summed from 2009 to 2019, don't match exactly. 
+This discrepancy is expected and its cause is not important. To cancel the discrepancy, we compute correction
+factors and apply them, for each sex and age group, so that the 10-year total matches exactly.
+
+The next graphs shows the yearly mortality model and compares it to empirical data:
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$expected_death_per_year)
+```
+
+### 4. Weekly mortality model
+
+We now have a yearly model, but we need weekly projections. For our weekly model, we first compute, for each sex and 
+age group, the percent of deaths that happens in a given week of the year, and we multiply this coefficient with the yearly 
+death rate for this year. Note that we applied a 3-week centered rolling mean to the data series before aggregating per week of year.
+
+To get the weekly mortality, we take the yearly mortality, the population structure as of January 1st of the year,
+and we multiply, for each age group and sex, by the week pattern.
+
+
+## Excess mortality
+
+Now that we have a predictive model, we can compare the actual mortality with the one that would be expected in a "normal"
+(neither good, neither bad) year.
+
+Where possible, the data is shown from 2010 to make it possible to compare the mortality peaks of 2020 with those of recent years.
+
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$expected_death_per_week)
+```
+
+The following graphs are identical but focus on 2020:
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$expected_death_per_week_2020)
+```
+
+
+## Cumulative excess mortality
+
+It is also interesting to look at cumulative excess mortality over a long period of time. In most countries, there is a succession of 
+one of two good years followed by one or two bad years. These graphs allow us to visualize how, and how fast, good years
+compensate the bad ones, and to compare 2020 to previous bad years.
+
+In most epidemics and other events, the most vulnerable people tend to be the most affected. 
+Some of these people would probably have died some time later of another cause. This phenomenon, when it exists, is visible on cumulative excess mortality graphs: the steepest is the slope _down_ after the epidemic peak, the less the lifetime of people was actually
+shortened by the event.
+
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$cumulative_excess_death_per_year)
+```
+
+
+## Mortality rates by age group
+
+The _excess mortality rate in 2020_ is risk to which a person in given age group and sex was exposed compared to the expected
+rate if the year was "normal". For instance, a 2% mortality rate means that a person in that group had 2 out of 100 more "chances"
+to die in 2020 than in a normal year. 
+
+Note that the excess mortality rate for 2020 is computed from incomplete data.
+
+The following graphs shows the excess mortality rate in 2020:
+
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$excess_death_rate_2020)
+print_graphs(all_graphs_by_kind$relative_excess_death_rate_2020)
+```
+
+
+The following graph compares the mortality rate in 2020 with the expected mortality rate. Since data from 2020 is incomplete,
+this rate is computed as being the expected yearly mortality rate for the whole 2020, plus the excess mortality rate
+computed for the period where data is available. 
+
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$compared_death_rate_2020)
+```
+
+
+## Mortality rates in historical context
+
+To interpret mortality rates, we need to compare them with other relevant mortality rates. Besides the geographic
+comparison, we can attempt a historical comparison and try to answer the question: how long do we have to
+look in the past to see similar mortality rates or excess mortality rates.
+
+### Comparison of absolute mortality rates
+
+The following graphs shows the historical mortality rates for different age groups and, on the same graph, a
+horizontal line showing the value of the mortality rate observed in 2020 (based on partial data). The intersection
+point of the horizontal line with the historical time series gives us the year in which the mortality observed in 2020
+was usual.
+
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$comparative_death_rate_F)
+print_graphs(all_graphs_by_kind$comparative_death_rate_M)
+```
+
+### Historical comparison
+
+How exceptional is the COVID-19 epidemic? Is it a once-in-a-decade event or a once-in-a-century one? The answer depends on the metric that
+we consider. We will consider two metric: absolute mortality rates, and excess mortality rates. For each age group, we will find the most recent year
+where the metric was _worse_ than in 2020.
+
+
+### Comparison of absolute mortality rates
+
+The following graphs illustrate how many years in the past do we have to look at to see an equal or greater _absolute_ mortality rate, that is,
+a greater risk of dying during the calendar year for each age group and sex.
+
+Interesting points in these graphs are:
+
+* In general, the absolute mortality of 2020 would be typical for years 2000-2010 according to the countries.
+* Although neglected by the mainstream media, most countries have a significantly higher mortality for surprisingly young age groups. 
+It would be interesting to analyze the cause of these deaths -- COVID-19 or lockdown?
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$year_with_comparable_death_rate)
+```
+
+
+### Comparison of excess mortality rates
+
+The following graphs gives a historic perspective on the _excess_ mortality rates. To estimate the excess mortality of past years, I simply make the difference between the mortality for the current year and the mean of the mortality for the next and the previous years.
+
+* There are great variations between countries. In general, for countries that were severely affected, the last precendent of a similar 
+excess mortality is found between 1950 and 1970.
+* This graph confirms that the mortality rates of some young or mid-life groups are at a historical high.
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$year_with_comparable_excess_death_rate)
+```
+
+
+## Loss of life expectancy
+
+A question that arises from the analysis of the mortality by age group is: which weight should be given to each age group? The most common approach is to
+consider all deaths equal and just to sum the deaths of all age groups. Another approach is to consider to life expectancy, i.e., the number of remaining years
+that people were expected to live if they had not died unexpectedly (in a statistical meaning). This metric can be useful when comparing the fairness of
+different allocation strategies for vaccines. Should the strategy focus on minizing the number of deaths or to maximize the life expectancy? 
+
+For this analysis, I have computed remaining life expectancy for each age group using the _demography_ package of R. For age groups over 100, the life
+expectancy was set to 2 years.
+
+It is worth noting that in all categories, the loss of life expectancy is shorter than the duration of the lockdowns.
+
+The following graphs shows how many years of life expectancy were lost in 2020 compared to expectations:
+
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$lost_life_expectancy)
+```
+
+
+## Comparison with COVID19 mortality data
+
+The following graphs compare excess mortality (computed from demographic data as explained above) with the mortality attributed to COVID19 (as reported by the media).
+
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$covid_death)
+print_graphs(all_graphs_by_kind$covid_cumulative_death)
+```
+
+
+## Government response, impact on mobility, and correlation with excess mortality
+
+The following graphs represent three independent time series on the same time axis. The three time series have a maximum of 100 by construction:
+
+* The _government stringency index_ is a measure of the stringency of restrictions on freedom of movement and association, as reported by the
+  [Oxford Covid-19 Government Response Tracker](https://github.com/OxCGRT/covid-policy-tracker).
+  
+* The _mobility decrease_ is the decrease of the mobility of people, in percent from the baseline, as measured by Google from data collected
+from mobile devices. The index shown in this graph is the mean of three measures: use of workplaces (instead of home office), use of transit stations, 
+and use of retail and recreational facilities.
+
+* The _mortality increase_ is the excess mortality as a percent of the expected mortality.
+
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$restrictions_mobility)
+```
