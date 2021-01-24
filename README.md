@@ -2,7 +2,10 @@ This repo provides an analysis of the excess mortality in 2020 in most European 
 article, but not the data itself.
 
 * To read the article, go to the [rendered article](https://gfraiteur.github.io/mortality/detailed.html).
-* To edit the article, open [all_countries.Rmd](detailed.Rmd).
+* To edit the article, open [detailed.Rmd](detailed.Rmd).
+* The scripts behind the article are:
+   * [country.R](country.R) analyzes one country,
+   * [all_countries.R](all_countries.R) aggregates all countries (this is typically the entry point).
 
 
 ## Running the scripts
