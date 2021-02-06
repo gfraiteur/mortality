@@ -42,3 +42,4 @@ data/
 rsconnect/
 *.Rdata
 passwords.R
+.RDataTmp1

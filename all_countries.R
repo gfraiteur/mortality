@@ -304,4 +304,4 @@ restriction_summary %>%
 # 
 
 
-save.image("all_countries.Rdata")
+save.image("./data/all_countries.Rdata")

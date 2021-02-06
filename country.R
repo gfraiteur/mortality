@@ -57,7 +57,8 @@ if ( !exists("all_graphs")) {
 
 this_theme <- function(title) {
   if ( exists("max_week_2020")) {
-    caption = sprintf( "Mortality data available until %d-th week of 2020", max_week_2020 )
+    caption = if_else( max_week_2020 == 53, "Mortality data for 2020 is complete.",
+                       sprintf( "Mortality data for 2020 are available until the %d-th week only.", max_week_2020 ) )
   } else  {
     caption = NULL
   }
@@ -167,7 +168,7 @@ age_group <- death %>%
 
 # In some countries, we have coarse age groups for temporary data (last two or three weeks). 
 # We remove these age groups and the deaths data of all affected weeks.
-temporary_age_groups = age_group %>% filter( min_year == 2020 )
+temporary_age_groups = age_group %>% filter( min_year >= 2020 )
 
 if ( current_country_hmd_code != "FRATNP" ) {
   death_invalid_weeks = (death %>%
@@ -321,10 +322,10 @@ rm( population_structure_age_female, population_structure_age_male )
 population_structure_max_year = max( population_structure$year )
 
 
-# Extrapolate the population structure to 2020 by using a linear regression for each age group.
-if ( population_structure_max_year < 2020 ) {
+# Extrapolate the population structure to 2021 by using a linear regression for each age group.
+if ( population_structure_max_year < 2021 ) {
   
-  population_structure_missing_years <- data.frame( year = seq(population_structure_max_year+1, 2020, 1) )
+  population_structure_missing_years <- data.frame( year = seq(population_structure_max_year+1, 2021, 1) )
 
   population_structure_extrapolated <- transpose( data.frame(  population_structure %>% 
                                                             filter( year >= population_structure_max_year - 5 ) %>%
@@ -511,14 +512,14 @@ death_expected_yearly <- death_expected_yearly %>% select(-death_expected_raw) %
 
 # Graph: expected number of deaths per year vs reality
 death_expected_yearly %>%
-  filter(year <= 2019) %>%
+  filter(year <= if_else( max_week_2020 == 53, 2020, 2019 )) %>%
   group_by(year) %>%
   summarise( death_expected_yearly = sum(death_expected_yearly), death_observed_yearly = sum(death_observed_yearly)) %>%
   ggplot( aes(x = year, y = value)) + 
   geom_line(aes(y = death_expected_yearly,  color="expected")) + 
   geom_line(aes(y = death_observed_yearly,  color="real")) +
   this_theme("Expected vs observed number of deaths per year ") +
-  scale_x_continuous(name = "year", breaks = 2009:2019, minor_breaks = FALSE, limits = c(2009,2019)) +
+  scale_x_continuous(name = "year", breaks = 2009:2020, minor_breaks = FALSE, limits = c(2009,2020)) +
   scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE),
                      limits = c(3000 * population_axis_scale, 7000 * population_axis_scale),
                      sec.axis = sec_axis( population_axis_transform, name = population_axis_name)) +
@@ -563,7 +564,7 @@ death_expected_weekly %>%
    theme(legend.title = element_blank())  +
   geom_line(aes(y = death_expected, col = "expected")) + 
   geom_line(aes(y = death_observed, col = "observed")) +
-  scale_x_date( date_breaks = "1 year", labels = date_format("%Y"), name = "year", limits = c( as.Date( "2010-01-01" ), as.Date("2020-12-31") )) +
+  scale_x_date( date_breaks = "1 year", labels = date_format("%Y"), name = "year", limits = c( as.Date( "2010-01-01" ), Sys.Date() )) +
   scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths per week", 
                      limits = c(0,250 * population_axis_scale),
                      sec.axis = sec_axis( population_axis_transform, name = population_axis_name)) +
@@ -602,11 +603,11 @@ death_expected_weekly %>%
   ggplot( aes(x = date)) +
   geom_line(aes(y = excess_death, col = "weekly excess deaths")) + 
   geom_line(aes(y = cum_excess_deaths, col = "cumulative excess deaths")) +
-  scale_x_date( date_breaks = "1 year", labels = date_format("%Y"), name = "year") +
+  scale_x_date( date_breaks = "1 year", labels = date_format("%Y"), name = "year", limits = c( as.Date( "2009-01-01" ), Sys.Date() )) +
   this_theme("Cumulative excess deaths") +
    theme(legend.title = element_blank()) +
   scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "excess deaths",
-                     limits = c(-500*population_axis_scale, 1000 * population_axis_scale),
+                     limits = c(-500*population_axis_scale, 1200 * population_axis_scale),
                      sec.axis = sec_axis( population_axis_transform, name = population_axis_name))
 
 append_graph("cumulative_excess_death_per_year")
@@ -863,7 +864,7 @@ death_expected_weekly %>%
     geom_line( aes( y = excess_death, color = "excess death" )) +
     scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "date") +
     scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths per week",
-                       limits = c(-25*population_axis_scale, 150*population_axis_scale),
+                       limits = c(-50*population_axis_scale, 150*population_axis_scale),
                        sec.axis = sec_axis( population_axis_transform, name = population_axis_name)
                        ) +
     this_theme( "Number of weekly excess deaths compared to COVID19-attributed deaths") 
@@ -885,7 +886,7 @@ death_expected_weekly %>%
   geom_line( aes( y = excess_death, color = "excess death" )) +
   scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "date") +
   scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "cumulative number of deaths",
-                     limits = c(-100*population_axis_scale, 1000*population_axis_scale),
+                     limits = c(-200*population_axis_scale, 1200*population_axis_scale),
                      sec.axis = sec_axis( population_axis_transform, name = population_axis_name)) +
   this_theme( "Number of cumulative excess deaths compared to COVID19-attributed deaths") 
 
@@ -917,7 +918,7 @@ restrictions %>%
   filter( country_hmd_code == current_country_hmd_code ) %>%
   ggplot(aes(x=date, y=StringencyIndex, color = country_iso_code )) +
   geom_line() +
-    scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "date", limits = c(as.Date("2020-03-01"), as.Date("2020-12-31"))) +
+    scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "date", limits = c(as.Date("2020-03-01"),  Sys.Date())) +
     scale_y_continuous(limits = c(0, 100)) +
     this_theme( "Government response stringency")
   
@@ -964,7 +965,7 @@ mobility %>%
   melt("date") %>%
   ggplot(aes(x=date, y = value, color = variable ))  +
     geom_line() +
-    scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "date", limits = c(as.Date("2020-03-01"), as.Date("2020-12-31"))) +
+    scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "date", limits = c(as.Date("2020-03-01"), Sys.Date())) +
     scale_y_continuous(limits = c(NA, NA), name = "percent changes from baseline") +
     this_theme( "Mobility index by Google") 
 
@@ -991,7 +992,7 @@ mobility %>%
     geom_line() +
     guides(linetype = FALSE)  +
     scale_y_continuous(limits = c(-100, 160), name = "") +
-    scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "date", limits = c(as.Date("2020-03-01"), as.Date("2020-12-31"))) +
+    scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "date", limits = c(as.Date("2020-03-01"),  Sys.Date())) +
     this_theme( "Government restrictions with effect on reduction of mobility") 
   
 

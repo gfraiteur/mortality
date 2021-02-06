@@ -21,11 +21,11 @@ output:
 ```{r setup, include=FALSE}
 library(ggpubr)
 library(dplyr)
-# file.remove("all_countries.Rdata")
-if ( !file.exists("all_countries.Rdata")) {
+# file.remove("./data/all_countries.Rdata")
+if ( !file.exists("./data/all_countries.Rdata")) {
   source("all_countries.R", local = knitr::knit_global())
 } else {
-  load("all_countries.Rdata")
+  load("./data/all_countries.Rdata")
 }
 
 knitr::opts_chunk$set(echo = FALSE, message = FALSE)
@@ -130,6 +130,9 @@ When the population structure is not available until 2020,
 we use linear regressions, for each sex and age, to complete the missing years. The coefficients are computed based on the last
 5 years for which data are available. Typically only the last 1 or 2 years of data are missing, therefore a linear extrapolation
 (as opposed to the use of a more complex model such as Lee-Carter) is considered sufficient.
+
+(Note that we also use this linear regression to project the population structure to 2021, which is incorrect by up to 10% because
+of the excess mortality in 2020. Excess mortality in 2021 can therefore be overestimated by up to 10% according to countries.)
 
 ### 2. Death rates
 
