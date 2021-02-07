@@ -24,7 +24,7 @@ rm(
   list= setdiff(ls(), c("hmd_mx", "hmd_pop", "current_country_hmd_code",
                         "all_graphs", "selected_countries", "all_excess_death_2020", "all_years_with_more_mortality",
                         "all_life_expectancy", "mobility", "all_death_expected_weekly",
-                        "all_covid_death"))
+                        "all_covid_death", "all_country_summary"))
   )
 
 
@@ -700,7 +700,7 @@ for ( s in sex) {
 
 excess_death_2020 %>%
   merge( age_group ) %>%
-  filter( age_min >= 45) %>%
+#  filter( age_min >= 45) %>%
   group_by(age_min,sex) %>%
   summarise(expected_death_rate = sum(expected_death) / sum(population_count) ,
             observed_death_rate = sum(death_observed) / sum(population_count) ) %>%
@@ -708,15 +708,15 @@ excess_death_2020 %>%
   ggplot(aes(x=age_min, y=value, color=sex, linetype=variable)) +
   geom_point(aes()) +
   geom_line(aes()) +
-  scale_y_log10(labels = scales::percent_format(accuracy = 0.1), name = "death rate (log10 scale)", limits = c(0.0005, 0.333))  +
-  scale_x_continuous(name = "age group", breaks = seq(0,100,5), minor_breaks = FALSE) +
-  this_theme( "Expected vs observed death rate 2020") 
+  scale_y_log10(labels = scales::percent_format(accuracy = 0.01), name = "death rate (log10 scale)", limits = c(0.000025, 0.333))  +
+  scale_x_continuous(name = "age group", breaks = seq(0,100,5), limits= c(0,100), minor_breaks = FALSE) +
+  this_theme( "Expected vs observed mortality rate 2020") 
 
 append_graph("compared_death_rate_2020")
 
 excess_death_2020 %>%
   merge( age_group ) %>%
-  filter( age_min >= 45) %>%
+  filter( age_min >= 60) %>%
   group_by(age_min,sex) %>%
   summarise(excess_death_rate = (sum(death_observed) - sum(expected_death)) / sum(population_count)  )  %>%
   ggplot(aes(x=age_min, y=excess_death_rate, color=sex)) +
@@ -724,7 +724,7 @@ excess_death_2020 %>%
   geom_line(aes()) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 0.1), name = "excess death rate", limits = c(-0.03, 0.1), breaks = seq(-0.02,0.1,0.01))  +
   scale_x_continuous(name = "age group", breaks = seq(0,100,5), minor_breaks = FALSE) +
-  this_theme( "Excess death rate 2020") 
+  this_theme( "Excess mortality rate 2020") 
 
 append_graph("excess_death_rate_2020")
 
@@ -1000,10 +1000,20 @@ mobility %>%
   
 append_graph("restrictions_mobility")
 
+country_summary = data.frame( country_hmd_code = c(current_country_hmd_code), max_week_2020 = c(max_week_2020))
+
 
 # All-country aggregations
 
 all_graphs[[current_country_hmd_code]] <- graphs
+
+
+if ( !exists("all_country_summary")) {
+  all_country_summary <- country_summary
+} else {
+  all_country_summary <- rbind( all_country_summary, country_summary )
+}
+
 
 excess_death_2020$country_hmd_code = current_country_hmd_code
 if ( !exists("all_excess_death_2020")) {
@@ -1033,3 +1043,4 @@ if ( !exists("all_death_expected_weekly")) {
 } else {
   all_death_expected_weekly <- rbind( all_death_expected_weekly, death_expected_weekly )
 }
+
