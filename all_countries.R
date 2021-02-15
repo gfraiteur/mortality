@@ -328,15 +328,17 @@ ggplot(aes(x=autumn, y=spring, label = country_hmd_code )) +
   geom_point() +
   geom_label( color = "blue", alpha = 0.5 ) 
 
+parks_vs_excess_death =
+  all_death_expected_weekly %>%
+    merge( all_country_summary ) %>%
+    merge( countries ) %>%
+    filter( max_week_2020 == 53 & year == 2020 &  date >= as.Date("2020-03-01") ) %>%
+    group_by( country_iso_code_2, country_name ) %>%
+    summarise( excess_death_rate = ( sum(death_observed) / sum(death_expected)) - 1) %>%
+    merge( mobility_summary ) %>%
+    mutate( parks = parks/ 100 ) 
 
-all_death_expected_weekly %>%
-  merge( all_country_summary ) %>%
-  merge( countries ) %>%
-  filter( max_week_2020 == 53 & year == 2020 &  date >= as.Date("2020-03-01") ) %>%
-  group_by( country_iso_code_2, country_name ) %>%
-  summarise( excess_death_rate = ( sum(death_observed) / sum(death_expected)) - 1) %>%
-  merge( mobility_summary ) %>%
-  mutate( parks = parks/ 100 ) %>%
+parks_vs_excess_death %>%
   ggplot(aes(x=parks, y=excess_death_rate, label = country_name )) +
   geom_point() +
   geom_smooth( method = "lm", se = FALSE, alpha = 0.1) +
@@ -344,6 +346,7 @@ all_death_expected_weekly %>%
   scale_x_continuous(labels =  scales::percent_format(accuracy = 1), name = "Increase in attendance of parks according to Google") +
   scale_y_continuous(labels =  scales::percent_format(accuracy = 1), name = "Excess mortality based on demographic dats") +
   labs( title = "Correlation between increase in park attendance and excess mortality rate")
+
 
 
 save.image("./data/all_countries.Rdata")
