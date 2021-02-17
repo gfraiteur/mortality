@@ -1,7 +1,9 @@
 library(ggpubr)
 library(GGally)
 
-selected_countries = c( "ESP", "BEL", "POL", "NLD", "ITA", "CZE", "FRATNP", "CHE", "DNK", "DEUTNP", "FIN", "SWE", "GRC", "HUN", "HRV", "EST", "SVN" )
+selected_countries = c( "ESP", "BEL", "POL", "NLD", "ITA", "CZE", "FRATNP", "CHE", "DNK", "DEUTNP", "FIN", "SWE", "GRC", "HUN", "HRV", "EST", "SVN", "LUX", "ISL", "BGR", "LTU" )
+
+# RUS: no data for 2020.  
 
 if ( exists("all_graphs")) rm( all_graphs )
 if ( exists("all_excess_death_2020")) rm( all_excess_death_2020 )
@@ -52,7 +54,7 @@ print_graphs = function(graphs) {
   graphs_without_title$title = NULL
   figure <- ggarrange( plotlist = graphs_without_title,
                        ncol = 3,
-                       nrow = 6,
+                       nrow = 7,
                        common.legend = TRUE, 
                        legend = "top" 
                        )

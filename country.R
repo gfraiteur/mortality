@@ -641,10 +641,15 @@ excess_death_2020$expected_yearly_death_rate <- excess_death_2020$death_expected
 excess_death_2020$observed_yearly_death_rate <- excess_death_2020$expected_yearly_death_rate + excess_death_2020$excess_death_rate
 
 # Test whether the excess death is significant
-excess_death_2020$excess_death_signicant = unlist(Map(function(x,n,p) prop.test(x,n,p,alternative="greater")$p.value < 0.05, 
-                                       x = excess_death_2020$death_observed, 
-                                       n = excess_death_2020$population_count, 
-                                       p = excess_death_2020$expected_death_rate))
+if ( current_country_hmd_code != 'ISL') {
+  excess_death_2020$excess_death_signicant = unlist(Map(function(x,n,p) prop.test(x,n,p,alternative="greater")$p.value < 0.05, 
+                                         x = excess_death_2020$death_observed, 
+                                         n = excess_death_2020$population_count, 
+                                         p = excess_death_2020$expected_death_rate))
+} else {
+  # The above test fails for Island.
+  excess_death_2020$excess_death_signicant = FALSE
+}
 
 # Comparable years
 
@@ -722,7 +727,7 @@ excess_death_2020 %>%
   ggplot(aes(x=age_min, y=excess_death_rate, color=sex)) +
   geom_point(aes()) +
   geom_line(aes()) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1), name = "excess death rate", limits = c(-0.03, 0.1), breaks = seq(-0.02,0.1,0.01))  +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1), name = "excess death rate", limits = c(-0.04, 0.1), breaks = seq(-0.04,0.1,0.01))  +
   scale_x_continuous(name = "age group", breaks = seq(0,100,5), minor_breaks = FALSE) +
   this_theme( "Excess mortality rate 2020") 
 
