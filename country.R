@@ -521,7 +521,7 @@ death_expected_yearly %>%
   this_theme("Expected vs observed number of deaths per year ") +
   scale_x_continuous(name = "year", breaks = 2009:2020, minor_breaks = FALSE, limits = c(2009,2020)) +
   scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE),
-                     limits = c(3000 * population_axis_scale, 7000 * population_axis_scale),
+                     limits = c(3000 * population_axis_scale, 8500 * population_axis_scale),
                      sec.axis = sec_axis( population_axis_transform, name = population_axis_name)) +
   theme(legend.title = element_blank()) 
 
@@ -566,7 +566,7 @@ death_expected_weekly %>%
   geom_line(aes(y = death_observed, col = "observed")) +
   scale_x_date( date_breaks = "1 year", labels = date_format("%Y"), name = "year", limits = c( as.Date( "2010-01-01" ), Sys.Date() )) +
   scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths per week", 
-                     limits = c(0,250 * population_axis_scale),
+                     limits = c(0,320 * population_axis_scale),
                      sec.axis = sec_axis( population_axis_transform, name = population_axis_name)) +
   this_theme("Expected vs observed number of deaths per week")  
 
@@ -584,7 +584,7 @@ death_expected_weekly %>%
   geom_line(aes(y = death_observed, col = "observed")) +
   scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "year", limits = c( as.Date( "2020-01-01" ), Sys.Date() ) ) +
   scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths per week", 
-                     limits = c(0,250 * population_axis_scale),
+                     limits = c(0,320 * population_axis_scale),
                      sec.axis = sec_axis( population_axis_transform, name = population_axis_name)) +
   this_theme("Expected vs observed number of deaths per week (since 01/2020)")  
 
@@ -713,7 +713,7 @@ excess_death_2020 %>%
   ggplot(aes(x=age_min, y=value, color=sex, linetype=variable)) +
   geom_point(aes()) +
   geom_line(aes()) +
-  scale_y_log10(labels = scales::percent_format(accuracy = 0.01), name = "death rate (log10 scale)", limits = c(0.000025, 0.333))  +
+  scale_y_log10(labels = scales::percent_format(accuracy = 0.01), name = "death rate (log10 scale)", limits = c(0.000025, 0.5))  +
   scale_x_continuous(name = "age group", breaks = seq(0,100,5), limits= c(0,100), minor_breaks = FALSE) +
   this_theme( "Expected vs observed mortality rate 2020") 
 
@@ -721,7 +721,7 @@ append_graph("compared_death_rate_2020")
 
 excess_death_2020 %>%
   merge( age_group ) %>%
-  filter( age_min >= 60) %>%
+  filter( age_min >= 40) %>%
   group_by(age_min,sex) %>%
   summarise(excess_death_rate = (sum(death_observed) - sum(expected_death)) / sum(population_count)  )  %>%
   ggplot(aes(x=age_min, y=excess_death_rate, color=sex)) +
@@ -869,7 +869,7 @@ death_expected_weekly %>%
     geom_line( aes( y = excess_death, color = "excess death" )) +
     scale_x_date( date_breaks = "1 month", labels = date_format("%m/%y"), name = "date") +
     scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "deaths per week",
-                       limits = c(-50*population_axis_scale, 150*population_axis_scale),
+                       limits = c(-50*population_axis_scale, 200*population_axis_scale),
                        sec.axis = sec_axis( population_axis_transform, name = population_axis_name)
                        ) +
     this_theme( "Number of weekly excess deaths compared to COVID19-attributed deaths") 
