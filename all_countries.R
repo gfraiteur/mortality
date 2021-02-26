@@ -142,7 +142,7 @@ restriction_summary =
      summarise( stringency = mean(StringencyIndex, na.rm = TRUE),
                 government_response = mean(GovernmentResponseIndex, na.rm = TRUE),
                 containment_health = mean(ContainmentHealthIndex, na.rm = TRUE),
-                economic_support = mean(EconomicSupportIndex, na.rm = TRUE )
+                economic_support = mean(EconomicSupportIndex, na.rm = TRUE ),
                 )
 
 
@@ -178,6 +178,17 @@ restriction_summary %>%
   xlab("excess mortality (%)") + ylab("containment index") 
 
 
+
+mobility_summary %>%
+  merge( all_country_summary ) %>%
+  filter( max_week_2020 == 53 ) %>%
+  merge( countries ) %>%
+  merge(all_death_score) %>%
+  ggplot(aes(x=death_increase, y=residential, label = country_iso_code )) +
+  geom_point() +
+  geom_label( color = "blue", nudge_x = -0.005, nudge_y = 1.5, alpha = 0.5 ) +
+  xlab("excess mortality score") + ylab("stay-at-home increase") 
+
 mobility_summary %>%
   merge( all_country_summary ) %>%
   filter( max_week_2020 == 53 ) %>%
@@ -193,7 +204,7 @@ mobility_summary %>%
 
 all_mortality_by_age_supergroup =
   all_death_expected_weekly %>%
-    filter( date > as.Date("2020-03-01") & date < as.Date("2020-07-01")) %>%
+    filter( date > as.Date("2020-03-01") & date < as.Date("2020-12-31")) %>%
     merge(age_group) %>%
     group_by( country_hmd_code, age_supergroup ) %>%
     summarise( excess_death_percent =  (sum(death_observed) / sum(death_expected)) - 1 )
@@ -202,10 +213,9 @@ all_mortality_by_age_supergroup %>%
   merge( all_country_summary ) %>%
   filter( max_week_2020 == 53 ) %>%
   merge(countries) %>%
-  ggplot( aes(x=country_name, y=excess_death_percent, fill=age_supergroup)) +
-  geom_col( position = "dodge") +
-  coord_flip() 
-
+  ggplot( aes(x=age_supergroup, y=excess_death_percent, fill=country_name)) +
+  geom_col( position = "dodge") 
+  
 
 
 
@@ -218,72 +228,52 @@ all_mortality_by_age_supergroup_dcast =
              excess_death_retired = "65-84",
              excess_death_elder = "85+")
 
-all_mortality_by_age_supergroup %>%
-  merge( countries ) %>%
-  merge( all_country_summary ) %>%
-  filter( max_week_2020 == 53 ) %>%
-  merge(mobility_summary) %>%
-  merge( all_covid_death %>% 
-           filter( country_iso_code %in% selected_countries_info$country_iso_code) %>% 
-           group_by( country_iso_code) %>% 
-           summarise(covid_death_count=sum(covid_death))) %>%
-          merge(
-            all_death_expected_weekly %>%
-              filter( year == 2020 ) %>%
-              group_by( country_hmd_code ) %>%
-              summarise( death_expected = sum(death_expected))
-          ) %>%
-  merge( all_death_expected_weekly  %>%
-           merge(age_group) %>%
-           group_by(country_hmd_code, age_supergroup ) %>%
-           summarise( excess_death_rate = sum(death_observed) / sum(death_expected))
-         ) %>%
-  filter( age_supergroup >= "65") %>%
-  mutate( covid_death_percent = covid_death_count / death_expected ) %>%
-  select(-country_hmd_code, -country_iso_code_2, -country_iso_code, -country_name, -covid_death_count, -death_expected ) %>%
+big_correlation = 
+  all_mortality_by_age_supergroup %>%
+    merge( countries ) %>%
+    merge( all_country_summary ) %>%
+    filter( max_week_2020 == 53 ) %>%
+    merge(mobility_summary) %>%
+    merge( all_covid_death %>% 
+             filter( country_iso_code %in% selected_countries_info$country_iso_code) %>% 
+             group_by( country_iso_code) %>% 
+             summarise(covid_death_count=sum(covid_death))) %>%
+            merge(
+              all_death_expected_weekly %>%
+                filter( year == 2020 ) %>%
+                group_by( country_hmd_code ) %>%
+                summarise( death_expected = sum(death_expected))
+            ) %>%
+    merge( all_death_expected_weekly  %>%
+             merge(age_group) %>%
+             group_by(country_hmd_code, age_supergroup ) %>%
+             summarise( excess_death_rate = sum(death_observed) / sum(death_expected))
+           ) %>%
+    mutate( covid_death_percent = covid_death_count / death_expected ) 
+  
+big_correlation %>%
+  select(-country_hmd_code, -country_iso_code_2, -country_iso_code, -country_name, -covid_death_count, -death_expected, -max_week_2020 ) %>%
   ggpairs ( ggplot2::aes(colour=age_supergroup, alpha = 0.5)  )
   
 
 
 
-all_youth_mortality_by_sex =
+all_youth_mortality  =
   all_excess_death_2020 %>%
-    filter( age_group >= "10" & age_group <= "15-19") %>%
-    group_by( country_hmd_code, sex) %>%
+    merge( age_group ) %>%
+    mutate( age_group = if_else( age_min < 65, "over_65", "under_65") ) %>%
+    group_by( country_hmd_code, age_group) %>%
     summarise( excess_death_percent = sum(excess_death) / sum(expected_death)) %>%
-  arrange(excess_death_percent)
+    dcast(   country_hmd_code ~ age_group, value.var="excess_death_percent" )
+ 
 
-all_youth_mortality =
-all_youth_mortality_by_sex %>% 
-    group_by(country_hmd_code) %>% 
-    summarise( excess_death_percent=mean(excess_death_percent)) %>%
-    arrange(excess_death_percent)
-
-
-all_youth_mortality_by_sex %>%
-  ggplot(aes(x=country_hmd_code, y=excess_death_percent, fill = sex )) +
-    geom_col( position = "dodge") +
-   scale_x_discrete(limits=all_youth_mortality$country_hmd_code)
+all_youth_mortality %>%
+  ggplot(aes(x= over_65, y= under_65 , label = country_hmd_code )) +
+    geom_point() 
 
 
+summary(lm(all_youth_mortality$under_65 ~ all_youth_mortality$over_65))
 
-mobility_summary %>%
-  merge( countries ) %>%
-  merge(all_youth_mortality) %>%
-  ggplot(aes(x=excess_death_percent, y=residential, label = country_iso_code )) +
-  geom_point() +
-  geom_label( color = "blue", nudge_x = -0.005, nudge_y = 1.5, alpha = 0.5 ) +
-  xlab("excess youth mortality") + ylab("residential") 
-
-
-
-restriction_summary %>%
-  merge( countries ) %>%
-  merge(all_youth_mortality) %>%
-  ggplot(aes(x=excess_death_percent, y=stringency, label = country_iso_code )) +
-  geom_point() +
-  geom_label( color = "blue", nudge_x = -0.005, nudge_y = 1.5, alpha = 0.5 ) +
-  xlab("excess youth mortality") + ylab("stringency") 
 
 
 

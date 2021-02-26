@@ -35,7 +35,7 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE)
 
 ## Introduction
 
-This data analysis tries to shed light on a few controversial questions regarding the COVID19 epidemics and the governemental restrictions on freedom
+This data analysis tries to shed light on a few controversial questions regarding the COVID19 epidemics and the governmental restrictions on freedom
 of movement and association. It is based on demographic data instead of the usual COVID19 mortality data reported daily by the mainstream press. 
 
 My approach is to compare the number of deaths in 2020 (for weeks for which mortality data is available) with the number of deaths that would be _expected_ based on 

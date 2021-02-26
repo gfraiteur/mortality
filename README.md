@@ -1,11 +1,13 @@
 This repo provides an analysis of the excess mortality in 2020 in most European countries. It contains the source code of both the scripts and the
-article, but not the data itself.
+article, but not the data itself. There are two articles in this repo:
 
-* To read the article, go to the [rendered article](https://gfraiteur.github.io/mortality/detailed.html).
-* To edit the article, open [detailed.Rmd](detailed.Rmd).
-* The scripts behind the article are:
-   * [country.R](country.R) analyzes one country,
-   * [all_countries.R](all_countries.R) aggregates all countries (this is typically the entry point).
+* [Methodology and detailed per-country graphs](https://gfraiteur.github.io/mortality/detailed.html) (see also the  [source code](detailed.Rmd).
+* [Comparison of countries and correlations](https://gfraiteur.github.io/mortality/comparison.html) (see also the  [source code](comparison.Rmd).
+
+
+The scripts behind the article are:
+* [country.R](country.R) analyzes one country,
+* [all_countries.R](all_countries.R) aggregates all countries (this is typically the entry point).
 
 
 ## Running the scripts

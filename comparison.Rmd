@@ -1,0 +1,416 @@
+---
+title: "Comparison of demographic data of European nations in 2020"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 2
+    fig_width: 12
+
+---
+
+```{r setup, include=FALSE}
+library(ggpubr)
+library(dplyr)
+library(scales)
+library(GGally)
+# file.remove("./data/all_countries.Rdata")
+if ( !file.exists("./data/all_countries.Rdata")) {
+  source("all_countries.R", local = knitr::knit_global())
+} else {
+  load("./data/all_countries.Rdata")
+}
+
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning=FALSE)
+
+```
+
+## Introduction
+
+This data analysis tries to shed light on a few controversial questions regarding the COVID19 epidemics and the governmental restrictions on freedom
+of movement and association. It is based on demographic data instead of the usual COVID19 mortality data reported daily by the mainstream press. 
+
+My approach is to compare the number of deaths in 2020 (for weeks for which mortality data is available) with the number of deaths that would be _expected_ based on 
+the structure of the population on January 1^st^, 2020 and on the usual death rates. The difference between expectations and reality
+gives us a metric named _excess deaths_ when it is positive, or _deaths deficit_ when it is negative.
+
+Unlike COVID19 mortality data, demographic data are:
+
+* Slow: demographic data is published after 2 to 8 weeks according to countries.
+* Reliable and verified: demographic data is based on death certificates.
+* Historical, therefore comparable: states have been collecting demographic data for several decades -- more than a century for most European states. 
+* Non-ambiguous: the diagnostic is easier: a person is either dead or alive.
+
+This article analyses aggregate data for all European countries for which demographic data for 2020 were complete. This article is principally
+focused on comparing countries and finding correlation between factors. For details regarding individual countries, and for an explanation of the
+methodology, see the [detailed](detailed.Rmd) article.
+
+
+### Open sources
+
+This article, as well as all R scripts that have been used to compute the data, are hosted on GitHub at https://github.com/gfraiteur/mortality.
+If you have a question or remark related to this article, or if you have found a bug or inaccuracy, please open an issue on GitHub or, better, submit a pull request.
+
+All data comes from open sources and can be freely downloaded.
+
+* Population, death and death rates are sourced from the [Human Mortality Database](https://www.mortality.org). The _demography_ R package is usedwhere possible, otherwise the data are downloaded from the CSV file.
+  
+* COVID19 mortality is downloaded from [Our World in Data](https://covid.ourworldindata.org).
+
+* Mobility data provided by [Google COVID-19 Community Mobility Reports](https://www.google.com/covid19/mobility/).
+
+* Government restriction data are from the [Oxford Covid-19 Government Response Tracker](https://github.com/OxCGRT/covid-policy-tracker).
+
+
+### List of countries
+
+This report is based on the data of the following countries, which all have reported complete demographic data for 2020. Only European countries
+were considered, and only countries who reported demographic data by age group of 5 years.
+
+
+```{r}
+ all_country_summary  %>%
+  filter( max_week_2020 == 53 ) %>%
+  merge( countries ) %>%
+  select( country_name )
+```
+
+
+### About the author
+
+Gael Fraiteur graduated from the Louvain School of Engineering in 2001 as a civil engineer in applied mathematics. He also holds two minor degrees
+in philosophy from UCLouvain. He has worked since then in the software industry. In 2004, he started an open-source project named PostSharp. In 2009, he founded a company
+to market and develop the product. As the CEO and principal engineer of PostSharp Technologies, the author now shares his time between R&D, management and marketing. 
+
+
+## How much more than expected did we die in 2020?
+
+
+```{r}
+avg_excess_death_2020 =
+  all_excess_death_2020 %>%
+    merge( age_group ) %>%
+    merge( all_country_summary ) %>%
+    filter( max_week_2020 == 53 ) %>%
+    summarise(
+        relative_excess_death_rate = (sum(death_observed) / sum(expected_death)) -1,
+        absolute_excess_death_rate = sum(excess_death) / sum(population_count),
+        observed_death_rate = sum(death_observed) / sum(population_count),
+        expected_death_rate = sum(expected_death) / sum(population_count),
+        ) 
+```
+
+**The absolute mortality in Europe in 2020 was `r percent(avg_excess_death_2020$observed_death_rate, accuracy = 0.01)` instead of the expected 
+`r percent(avg_excess_death_2020$expected_death_rate, accuracy = 0.01)`: an `r percent(avg_excess_death_2020$relative_excess_death_rate, accuracy = 1)` increase.**
+
+This means means that `r percent(avg_excess_death_2020$absolute_excess_death_rate, accuracy = 0.01)` of the whole population died more than expected in 2020
+based on the population structure and long term demographic trends, but because `r percent(avg_excess_death_2020$expected_death_rate, accuracy = 0.01)` were
+expected to die, the relative excess mortality was `r percent(avg_excess_death_2020$relative_excess_death_rate, accuracy = 1)`.
+
+
+## How many days of life did we lose in 2020?
+
+```{r}
+all_lost_days = all_life_expectancy %>%
+  merge( all_country_summary ) %>%
+  filter( max_week_2020 == 53 ) %>%
+  group_by( sex, age_group, country_hmd_code ) %>%
+  summarise( life_expectancy = mean(life_expectancy)) %>%
+  merge(all_excess_death_2020) %>%
+  mutate( lost_days = 365 * excess_death * life_expectancy / population_count )
+
+all_lost_days_avg = all_lost_days %>%
+  summarise( lost_days_avg = sum(lost_days * population_count) / sum(population_count) )
+
+```
+
+
+**The average loss of life expectation in Europe was `r round( all_lost_days_avg$lost_days_avg, digits = 1)` days.**
+
+That is, if we take the percent of people who unexpectedly
+died in 2020, and we multiply this number by the remaining life expectation of this age group, we get `r round( all_lost_days_avg$lost_days_avg, digits = 1)` days.
+
+
+## Which age groups were the most affected by "2020"?
+
+**The most affected age groups were not the 80+ but rather the 10-20, 35-45, and 70-80 groups.**
+
+The common belief says that the oldest age groups were the most affected by prematurate death. In absolute numbers, this is undeniable. However older people die
+more than younger people every year, so this data is not relevant. In terms of relative excess mortality, the oldest age group was not more affected by 2020
+than the younger groups.
+
+The following graphs shows the increase of mortality in 2020, relatively to the expected mortality based on demographic projections and long-term trends,for each sex and age group:
+
+
+```{r}
+all_excess_death_2020 %>%
+  merge( age_group ) %>%
+  merge( all_country_summary ) %>%
+  filter( max_week_2020 == 53 ) %>%
+  group_by( age_min,sex) %>%
+  summarise(excess_death_rate = (sum(death_observed) / sum(expected_death)) -1  )  %>%
+  ggplot(aes(x=age_min, y=excess_death_rate, color=sex, fill = sex)) +
+  geom_point(aes()) +
+  geom_smooth(se = FALSE, span = 0.4) +
+  geom_hline(yintercept = 0) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), name = "relative excess death rate (square root scale)",
+                     limits = c(-1, 1.25), breaks = signed_square(seq(-1,2,0.1) ), trans = signed_sqrt_trans)  +
+  scale_x_continuous(name = "age group", breaks = seq(0,100,5), minor_breaks = FALSE) +
+  labs( title = "Relative excess death rate 2020 (all countries)") 
+```
+
+
+The following graphs shows the days of life that have been lost, in average for each age group and sex, in 2020, compared to expectations
+based on demographic projections. You can see that for all age groups, the loss of life expectancy is shorter than the duration of the lockdowns.
+
+
+```{r, warning=FALSE}
+
+all_lost_days %>%
+  merge( age_group ) %>%
+  ggplot( aes(x=age_min, y=lost_days, color=sex, fill = sex)) +
+  geom_boxplot(aes(x=reorder(age_min,sex))) +
+  ggtitle( "Number of lost days of life expectancy in 2020")  +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "days") 
+```
+
+
+Note that there are great differences between countries regarding the mortality of young age groups. The following graphs shows
+the correlation between excess mortality over 65 and excess mortality under 65.
+
+
+```{r}
+
+all_youth_mortality %>%
+  ggplot(aes(x= over_65, y= under_65 , label = country_hmd_code )) +
+    geom_point() +
+    geom_label( color = "blue", nudge_y = -0.01, nudge_x = 0.01, alpha = 0.5, label.size = 0.1 ) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1))  +
+    scale_x_continuous(labels = scales::percent_format(accuracy = 1))  +
+    ylab("excess mortality of people under 65 (%)") + xlab("excess mortality of people over 65 (%)") 
+
+
+```
+
+The correlation between these two series in not significant:
+
+```{r}
+summary(lm(all_youth_mortality$under_65 ~ all_youth_mortality$over_65))
+```
+
+## Did governement restrictions help?
+
+**No, government restrictions on freedom of movement and association were counter-productive.**
+
+The principal response of European governments was to restrict the freedom of movement and association of the population. This is called "containment health"
+by the [Oxford Covid-19 Government Response Tracker](https://github.com/OxCGRT/covid-policy-tracker). The government's logic was that the more restrictions
+they put on the population, the lower the mortality will be.
+
+How did that turn out? Quite the opposite actually.
+
+The following graphs shows the correlation between the relative excess mortality in a country and the containment health index.
+
+```{r}
+restriction_summary %>%
+  merge(all_death_score) %>%
+  merge( all_country_summary ) %>%
+  filter( max_week_2020 == 53 ) %>%
+  merge( countries ) %>%
+  ggplot(aes(y=death_increase, x=containment_health, label = country_iso_code )) +
+  geom_point() +
+  geom_label( color = "blue", nudge_y = -0.005, nudge_x = 1, alpha = 0.5, label.size = 0.1 ) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))  +
+  ylab("excess mortality (%)") + xlab("containment index") +
+  labs( title = "Correlation of excess mortality with 'containment health' index")
+```
+
+You can see that the correlation is weak but is _positive_: the more restrictions the government imposed, the more people died, or inversely (correlation is not reason).
+The correlation is not significant (80%), but what is significant is that there _absolutely no_ indication that government policies were useful in
+reducing the mortality.
+
+
+```{r}
+restriction_death_correlation =
+  restriction_summary %>%
+  filter( max_week_2020 == 53 ) %>%
+    merge(all_death_score)
+
+summary( lm( restriction_death_correlation$death_increase ~ restriction_death_correlation$containment_health ) )
+```
+
+
+## Did people died less when they staid at home?
+
+**No, people died more when they staid at home.**
+
+As you may know, Google tracks the location and movements of anybody using Android phones or other Google apps. Google know if people staid at home,
+commuted to work, spent time in nature, or other. Google makes aggregate data available for researches.
+
+From this data, can we conclude that staying at home helped? The answer is simply _no_:
+
+
+```{r}
+mobility_summary %>%
+  merge( all_country_summary ) %>%
+  filter( max_week_2020 == 53 ) %>%
+  merge( countries ) %>%
+  merge(all_death_score) %>%
+  ggplot(aes(y=death_increase, x=residential, label = country_iso_code )) +
+  geom_point() +
+  geom_label( color = "blue", nudge_y = -0.005, nudge_x = 0.4, alpha = 0.5 ) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))  +
+  ylab("relative excess mortality") + xlab("stay-at-home increase (%)") +
+  labs( title = "Correlation of excess mortality with 'stay-at-home' increase")
+
+```
+
+Curious about the details of the correlation? 
+
+```{r}
+mobility_death_correlation =
+  mobility_summary %>%
+    merge( all_country_summary ) %>%
+    filter( max_week_2020 == 53 ) %>%
+    merge( countries ) %>%
+    merge(all_death_score)
+  
+summary( lm( mobility_death_correlation$death_increase ~ mobility_death_correlation$residential ) )
+```
+
+## Did those who went to nature die less? Did common sense work? 
+
+**Yes, people who spent more time in nature died less.**
+
+My parents always repeated that, if I feel sick or tired, I should go for a walk in nature. (They are still repeating me that today and I should
+probably go for a walk instead of writing this study.) How is it?
+
+
+```{r}
+mobility_summary %>%
+  merge( all_country_summary ) %>%
+  filter( max_week_2020 == 53 ) %>%
+  merge( countries ) %>%
+  merge(all_death_score) %>%
+  ggplot(aes(y=death_increase, x=parks, label = country_iso_code )) +
+  geom_point() +
+  geom_label( color = "blue", nudge_y = -0.01, nudge_x = 0.0, alpha = 0.5 ) +
+  geom_smooth( alpha = 0.5, se = FALSE, method = "lm") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))  +
+  ylab("relative excess mortality") + xlab("stay-in-nature increase (%)") +
+  labs( title = "Correlation of excess mortality with 'stay-at-home' increase")
+
+```
+
+How significant is this? Very! More than 99.9%. This is actually the highest correlation I have found in data.
+
+
+```{r}
+summary( lm( mobility_death_correlation$death_increase ~ mobility_death_correlation$parks ) )
+
+```
+
+The more populations went to parks, gardens and nature, and the less they died.
+
+
+## Did people die because of COVID-19 or because of lockdowns?
+
+**Old people probably died from COVID-19, young people probably from lockdowns. Babies died more when people did not go to their workplace. **
+
+People of all age groups died prematurely in 2020, except maybe early infancy. How is mortality in different age groups correlated
+to official COVID-19 mortality?
+
+The following correlation graphs shows that only the mortality of people aged over 65 is correlated to COVID-19 mortality.
+Mortality of lower age groups has no significant correlation with COVID-19 mortality, although these age groups have suffered an 
+equivalent increase of relative mortality than the older age groups.
+
+
+```{r}
+
+big_correlation %>%
+  select(-country_hmd_code, -country_iso_code_2, -country_iso_code, -country_name, -covid_death_count, -death_expected, -max_week_2020 ) %>%
+  ggpairs ( ggplot2::aes(colour=age_supergroup, alpha = 0.5), columns = c("excess_death_rate", "covid_death_percent")  )+
+  ggtitle("Correlation of all-cause excess mortality with COVID-19-attributed mortality\nfor different age groups")
+  
+```
+
+The most significant correlation is between infant mortality (0-4 years) and workplace. The more people avoided workplaces, the less babies died.
+However, in half of countries, babies died less than in a normal year.
+
+This is shown in the following graphs:
+
+
+```{r}
+
+workplace_infant_mortality_correlation =
+  mobility_summary %>%
+    merge( countries ) %>%
+    merge( all_mortality_by_age_supergroup ) %>%
+    filter( max_week_2020 == 53 & age_supergroup == '00-04' )
+
+workplace_infant_mortality_correlation %>%
+  ggplot(aes(y=excess_death_percent, x=-workplaces, label = country_iso_code )) +
+  geom_point() +
+  geom_label( color = "blue", nudge_y = -0.1, nudge_x = 0.0, alpha = 0.5 ) +
+  geom_smooth( alpha = 0.5, se = FALSE, method = "lm") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))  +
+  ylab("relative excess mortality") + xlab("decrease of workplace attendance (%)") +
+  labs( title = "Correlation of excess infant mortality with decreas of workplace attendance")
+
+```
+
+
+The correlation is has an significance of 95%:
+
+
+```{r}
+summary( lm( workplace_infant_mortality_correlation$excess_death_percent ~ workplace_infant_mortality_correlation$workplaces ) )
+
+```
+
+## When was the last time there was such mortality?
+
+**The mortality of 2020 was typical of the year 2010.**
+
+If as many people died in 2010 than in 2020, given the same population structure, 2010 would have been a normal year. The reason why 2020 is perceived
+as an exceptionally bad year is due to the aging of the population and the constant decrease of mortality in the last 10 years.
+
+```{r}
+all_years_with_more_mortality %>%
+  merge( age_group ) %>%
+  ggplot( aes(x=age_min, y=last_year_equivalent_death_rate, color=sex, fill = sex)) +
+  geom_boxplot(aes(x=reorder(age_min,sex))) +
+  ggtitle( "Last year with lower or equal mortality")  +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "year", trans = "reverse") +
+  xlab("age group")
+  
+```
+
+## When is the last time that so many people died prematurely?
+
+**The excess mortality of 2020 was typical of the 1970s.**
+
+If as many people died in 1975 than in 2020, compared to the year before, and given the same population structure, 1975 would have been a normal year. 
+
+The comparison of COVID-19 to the Spanish flu is unjustified, and there is no data proving which part of excess mortality is due to the virus itself,
+and which part to the governmental and media response to the epidemic.
+
+
+```{r}
+all_years_with_more_mortality %>%
+  merge( age_group ) %>%
+  ggplot( aes(x=age_min, y=last_year_equivalent_excess_death_rate, color=sex, fill = sex)) +
+  geom_boxplot(aes(x=reorder(age_min,sex))) +
+  ggtitle( "Last year with lower or equal mortality")  +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE), name = "year", trans = "reverse") +
+  xlab("age group")
+  
+```
+
+## Summary
+
+
+This article proofs, based on different sources of data, that government policies justified by the COVID-19 pandemic were inefficient at most,
+but quite probably counterproductive.
+
+It shows that the perception of COVID-19 being a one-in-a-century disaster is unjustified.
+
+It shows that the claim that the principal victims of the "2020 phenomenon" are the 80+ is also inaccurate.

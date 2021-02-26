@@ -96,7 +96,7 @@ if (!dir.exists(directory))  {
 weeks <- merge( 2005:2021,  1:52, all=TRUE )
 names(weeks) <- c("year", "week_of_year")
 weeks$week <- sprintf( "%i-W%02d", weeks$year, weeks$week_of_year )
-weeks$date <- make_date( weeks$year ) + (weeks$week_of_year - 1) * 7
+weeks$date <- make_date( weeks$year ) - wday(make_date( weeks$year )) - 1 + (weeks$week_of_year - 1) * 7
 
 ### LOAD HMD DATA
 
@@ -935,6 +935,7 @@ if (!exists("mobility")) {
   if ( !file.exists("./data/Global_Mobility_Report.csv")){
     download.file("https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv", "./data/Global_Mobility_Report.csv")
   }
+  
   mobility <- read_csv("data/Global_Mobility_Report.csv", 
                        col_types = cols(country_region = col_skip(), 
                                         #sub_region_1 = col_skip(), 
@@ -948,7 +949,7 @@ if (!exists("mobility")) {
                      workplaces = workplaces_percent_change_from_baseline,
                      residential = residential_percent_change_from_baseline,
                      parks = parks_percent_change_from_baseline) %>%
-            mutate(  week = make_date(year(date)) + 7* week(date))  %>%
+            mutate(  week = make_date(year(date)) - wday(make_date( year(date))) - 1 + 7* week(date))   %>%
             group_by( week, country_region_code ) %>%
             select( -date ) %>%
             rename( date = week, country_iso_code_2 = country_region_code ) %>%

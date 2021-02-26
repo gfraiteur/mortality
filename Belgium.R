@@ -11,150 +11,8 @@ library(gt)
 library(zoo)
 library(lme4)
 
-rm(list=ls())
-
-if ( !file.exists("Belgium.R")){
-  stop("Change the working directory to the repo directory.")
-}
-  
-
-# Generate time dimension (years, weeks)
-weeks <- merge( 2009:2020,  1:52, all=TRUE )
-names(weeks) <- c("year", "week_of_year")
-weeks$week <- sprintf( "%i-W%02d", weeks$year, weeks$week_of_year )
-weeks$date <- make_date( weeks$year ) + (weeks$week_of_year - 1) * 7
-
-# Generate age groups
-age_group <- data.frame( age_group = c("0-24", "25-44", "45-64", "65-74", "75-84", "85+"),
-                         age_min =   c(0,      25,      45,      65,       75,        85),
-                         age_max =   c(24,    44,       64,      74,       84,       110) )
-age = data.frame( age = 0:110 )
-age <- sqldf( "select age, age_group from age, age_group where age.age between age_group.age_min and age_group.age_max")
-
-### POPULATION STRUCTURE
-
-# Load the population structure. The state is given for January 1st of each year.
-if ( exists("population_structure"))  {
-  rm(population_structure)
-}
-for ( year in 2009:2020 ) {
-  message("Loading year ", year)
-  filename <- sprintf("./data/BEL/TF_SOC_POP_STRUCT_%d.txt", year)
-  if ( !file.exists(filename)) {
-    zipfilename <- sprintf("./data/BEL/TF_SOC_POP_STRUCT_%d.zip", year)
-    if ( !file.exists(zipfilename)) {
-      url <- sprintf("https://statbel.fgov.be/sites/default/files/files/opendata/BEL/bevolking naar woonplaats, nationaliteit burgelijke staat , leeftijd en geslacht/TF_SOC_POP_STRUCT_%d.zip", year)
-      download.file(url, zipfilename)
-    }
-    unzip(zipfilename, exdir = "./data/BEL")
-  }
-  
-  separator <- if ( year == 2020 ) { ";" } else { "|" }
-  population_structure_new <- read_delim(filename, separator, escape_double = FALSE, trim_ws = TRUE)
-  population_structure_new <- population_structure_new[,c("CD_SEX","CD_AGE","MS_POPULATION")]
-  names(population_structure_new) <- c("sex", "age", "population_count")
-  population_structure_new$year = year
-  
-  if ( exists("population_structure"))  {
-    population_structure <- rbind(population_structure, population_structure_new )
-  }
-  else {
-    population_structure <- population_structure_new
-  }
-  rm(population_structure_new)
-}
-
-# Removing irrelevant details from the population_structure dataset
-population_structure <- population_structure %>% 
-  group_by(sex, age, year) %>% 
-  summarise( population_count = sum(population_count)) %>%
-  ungroup()
-
-# Joining with age groun
-population_structure <- merge( population_structure, age, by = c("age") )
-
-population_structure_by_age_group <-
-  population_structure %>%
-  group_by( year, sex, age_group)  %>%
-  summarise( population_count = sum(population_count))
-  
-
-### DEATH
-
-# Load death data
-death_2020_max_week <- 49
-death_filename  <- sprintf("./data/BEL/DEMO_DEATH_OPEN_W%d.txt", death_2020_max_week)
-if ( !file.exists(death_filename)){
-  download.file("https://statbel.fgov.be/sites/default/files/files/opendata/BEL/deathday/DEMO_DEATH_OPEN.zip", "./data/BEL/DEMO_DEATH_OPEN.zip")
-  unzip("DEMO_DEATH_OPEN.zip", exdir = "./data/BEL" )
-}
-
-death <- read_delim(death_filename, ";", escape_double = FALSE, trim_ws = TRUE)
-death <- death[,c("CD_SEX","CD_AGEGROUP","NR_WEEK","MS_NUM_DEATH")]
-names(death) <- c("sex", "age_group", "week", "death_observed")
-death$sex[death$sex==1] <- "M"
-death$sex[death$sex==2] <- "F"
-death <- death %>% complete( sex, age_group, week, fill = list(death_observed = 0)  )
-death <- death %>%
-  group_by( sex, age_group, week ) %>% 
-  summarise( death_observed = sum(death_observed)) %>%
-  ungroup()
-
-# Add week info to DEATH
-death <- merge( death, weeks, by.x = "week", by.y = "week")
-death_yearly <- death %>% group_by( sex, age_group, year ) %>% summarise( death_observed_yearly = sum(death_observed))
-
-# Compute the histogram of deaths per week excluding year 2020. 
-death_per_week_of_year <- death %>% 
-  group_by( age_group, sex ) %>% 
-  arrange( age_group, sex, date ) %>%
-  mutate( death_observed_rollmean = rollmean(death_observed, 3, fill = NA)) %>%
-  filter(  year <= 2019)  %>%
-  group_by( age_group, sex, week_of_year ) %>%
-  summarise( 
-    avg_death_in_week_of_year = mean(death_observed_rollmean, na.rm = TRUE) ) %>%
-  ungroup() %>%
-  group_by( age_group, sex ) %>%
-  mutate( week_death_percent = avg_death_in_week_of_year / sum(avg_death_in_week_of_year)  )
-
-
-
-### MORTALITY
-
-# Load mortality data
-
-# You need a password to download this file.
-# download.file("https://www.mortality.org/hmd/BEL/STATS/Mx_1x1.txt", "hmd_BEL_STATS_Mx_1x1.txt" )
-
-mortality <- read_table2("./data/BEL/hmd_BEL_STATS_Mx_1x1.txt", skip = 1)
-
-mortality_male <- mortality[, c("Year", "Age", "Male")]
-names(mortality_male) <- c("year", "age", "mortality")
-mortality_male$sex <- 'M'
-
-mortality_female <- mortality[, c("Year", "Age", "Female")]
-names(mortality_female) <- c("year", "age", "mortality")
-mortality_female$sex <- 'F'
-
-mortality <- rbind(mortality_female, mortality_male)
-rm(mortality_female)
-rm(mortality_male)
-
-mortality$mortality <- as.double(mortality$mortality)
-mortality$age <- as.double(mortality$age)  # This will convert 110+ to N/A
-
-
-
-mortality <- 
-  mortality %>%
-  filter ( year < 1914 | year > 1918 ) %>%
-  arrange( age, sex, year ) %>%
-  group_by( age, sex ) %>%
-  mutate( mortality = na.approx( mortality, na.rm = FALSE ))
-  
-
-
-mortality <- merge( mortality, age, by = c("age")) 
+current_country_hmd_code = "BEL"
+source("country.R")
 
 
 ### COVID DEATH
@@ -162,24 +20,55 @@ mortality <- merge( mortality, age, by = c("age"))
 # Load COVID death
 
 if ( !file.exists("./data/BEL/COVID19BE_MORT.csv")){
-  download.file("https://epistat.sciensano.be/data/BEL/COVID19BE_MORT.csv", "./data/BEL/COVID19BE_MORT.csv")
+  download.file("https://epistat.sciensano.be/Data/COVID19BE_MORT.csv", "./data/BEL/COVID19BE_MORT.csv")
 }
 
-covid_death <- read_csv("./data/BEL/COVID19BE_MORT.csv", col_types = cols(REGION = col_skip()))
-names(covid_death) <- c("day","age_group","sex", "covid_death")
+covid_death <-
+  read_csv("./data/BEL/COVID19BE_MORT.csv", col_types = cols(REGION = col_skip())) 
+
+names(covid_death) <- c("day","age_covidgroup","sex", "covid_death")
 
 # Group COVID data by week.
-covid_death$date <- make_date( 2020 ) + (week(covid_death$day) - 1) * 7 # Key the data by week instead of 1 day
+covid_death$date <- covid_death$day - wday(covid_death$day) - 1
 
 covid_death <- covid_death %>%
-  group_by(age_group, sex, date) %>%
+  group_by(age_covidgroup, sex, date) %>%
   summarise(covid_death = sum(covid_death)) %>%
   ungroup()
 
 # Complete missing values with 0.
 covid_death <-covid_death %>%
-  complete( sex, date, age_group, fill = list(covid_death = 0)  )
+  complete( sex, date, age_covidgroup, fill = list(covid_death = 0)  )
 
+
+age_covidgroup =
+  data.frame( age_covidgroup = c("0-24", "25-44", "45-64", "65-74", "75-84", "85+"),
+              age_min = c(0, 25, 45, 65, 75, 85),
+              age_max = c(24, 44, 64, 74, 84, age_end)  )
+
+
+age_group = sqldf( "select age_group.*, age_covidgroup
+             from age_group, age_covidgroup
+             where age_group.age_min between age_covidgroup.age_min and age_covidgroup.age_max and
+             age_group.age_max between age_covidgroup.age_min and age_covidgroup.age_max")
+
+excess_death_vs_covid = 
+  death_expected_weekly %>%
+  merge( age_group, by = c("age_group") ) %>%
+  merge( covid_death, by = c("sex", "date", "age_covidgroup") )
+
+date_min = min(excess_death_vs_covid$date)
+date_max = max(excess_death_vs_covid$date)+6
+
+excess_death_vs_covid %>%
+  group_by( age_covidgroup ) %>%
+  summarise( covid_death = sum(covid_death) / sum(death_expected), 
+             excess_death = sum(excess_death) / sum(death_expected)) %>%
+  melt() %>%
+  ggplot(aes(x=age_covidgroup , y=value, fill=variable)) +
+  geom_col(position=position_dodge())  +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 01), name = "Mortality in % of expected mortality")  +
+  labs( title = sprintf( "COVID-19-attributed mortality vs excess demographic mortality\nin Belgium between %s and %s", date_min, date_max) )
 
 ### TEMPERATURES
 
