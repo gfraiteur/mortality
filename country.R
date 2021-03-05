@@ -96,7 +96,7 @@ if (!dir.exists(directory))  {
 weeks <- merge( 2005:2021,  1:52, all=TRUE )
 names(weeks) <- c("year", "week_of_year")
 weeks$week <- sprintf( "%i-W%02d", weeks$year, weeks$week_of_year )
-weeks$date <- make_date( weeks$year ) - wday(make_date( weeks$year )) - 1 + (weeks$week_of_year - 1) * 7
+weeks$date <- make_date( weeks$year ) - wday(make_date( weeks$year )) + 2 + (weeks$week_of_year - 1) * 7
 
 ### LOAD HMD DATA
 
@@ -915,8 +915,10 @@ restrictions = restrictions %>%
   merge( countries, by.x = c("CountryCode"), by.y = c("country_iso_code"), suffixes = c("","") ) %>%
   rename( country_iso_code = CountryCode ) %>%
   mutate( year = floor(Date/10000), month = floor( ( Date %% 10000 ) / 100  ), day = Date %% 100 ) %>% 
-  mutate( date = make_date( year, month, day)) %>% select( -Date, -year, -month, -day) %>%
-  complete( country_iso_code, date )
+  mutate( date = make_date( year, month, day)) %>%
+  select( -Date, -year, -month, -day) %>%
+  complete( country_iso_code, date ) %>%
+  mutate( week =date - wday(make_date( date )) - 1 )
 
 
 restrictions %>%  
@@ -949,7 +951,7 @@ if (!exists("mobility")) {
                      workplaces = workplaces_percent_change_from_baseline,
                      residential = residential_percent_change_from_baseline,
                      parks = parks_percent_change_from_baseline) %>%
-            mutate(  week = make_date(year(date)) - wday(make_date( year(date))) - 1 + 7* week(date))   %>%
+            mutate(  week = make_date(year(date)) - wday(make_date( year(date))) + 2 +  7* week(date))   %>%
             group_by( week, country_region_code ) %>%
             select( -date ) %>%
             rename( date = week, country_iso_code_2 = country_region_code ) %>%

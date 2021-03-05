@@ -19,13 +19,37 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-library(ggpubr)
-library(dplyr)
-# file.remove("./data/all_countries.Rdata")
-if ( !file.exists("./data/all_countries.Rdata")) {
-  source("all_countries.R", local = knitr::knit_global())
-} else {
-  load("./data/all_countries.Rdata")
+
+source("all_countries.R", local = knitr::knit_global())
+
+all_graphs_by_kind = list()
+
+for ( country in selected_countries_sorted$country_hmd_code) {
+  country_graphs = all_graphs[[country]]
+  for ( graph_name in names(country_graphs) ) {
+    if ( is.null( all_graphs_by_kind[[graph_name]] ) ) {
+      all_graphs_by_kind[[graph_name]] = list()
+      all_graphs_by_kind[[graph_name]][["title"]] = all_graphs[[country]][[graph_name]]$labels$title  
+    }
+    
+    all_graphs_by_kind[[graph_name]][[country]] = all_graphs[[country]][[graph_name]]
+    all_graphs_by_kind[[graph_name]][[country]]$labels$title = NULL
+  }
+}
+
+print_graphs = function(graphs) {
+  graphs_without_title = graphs
+  graphs_without_title$title = NULL
+  figure <- ggarrange( plotlist = graphs_without_title,
+                       ncol = 3,
+                       nrow = 8,
+                       common.legend = TRUE, 
+                       legend = "top" 
+                       )
+  figure <- annotate_figure(figure, top = text_grob(trimws( graphs$title ), size = 18 ) )
+  
+  print(figure)
+  
 }
 
 knitr::opts_chunk$set(echo = FALSE, message = FALSE)

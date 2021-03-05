@@ -13,12 +13,8 @@ library(ggpubr)
 library(dplyr)
 library(scales)
 library(GGally)
-# file.remove("./data/all_countries.Rdata")
-if ( !file.exists("./data/all_countries.Rdata")) {
-  source("all_countries.R", local = knitr::knit_global())
-} else {
-  load("./data/all_countries.Rdata")
-}
+
+source("all_countries.R", local = knitr::knit_global())
 
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning=FALSE)
 
@@ -100,11 +96,16 @@ avg_excess_death_2020 =
 ```
 
 **The absolute mortality in Europe in 2020 was `r percent(avg_excess_death_2020$observed_death_rate, accuracy = 0.01)` instead of the expected 
-`r percent(avg_excess_death_2020$expected_death_rate, accuracy = 0.01)`: an `r percent(avg_excess_death_2020$relative_excess_death_rate, accuracy = 1)` increase.**
+`r percent(avg_excess_death_2020$expected_death_rate, accuracy = 0.01)`: a `r percent(avg_excess_death_2020$relative_excess_death_rate, accuracy = 1)` increase.**
 
 This means means that `r percent(avg_excess_death_2020$absolute_excess_death_rate, accuracy = 0.01)` of the whole population died more than expected in 2020
 based on the population structure and long term demographic trends, but because `r percent(avg_excess_death_2020$expected_death_rate, accuracy = 0.01)` were
 expected to die, the relative excess mortality was `r percent(avg_excess_death_2020$relative_excess_death_rate, accuracy = 1)`.
+
+It does not mean that the mortality of the virus is `r percent(avg_excess_death_2020$absolute_excess_death_rate, accuracy = 0.01)`. A fraction of people
+have died from the effects of the lockdowns and not from the virus. Some people, conversely, may have died from COVID19 but would have died form another
+cause anyway in the studied period. Also, epidemic waves in some countries were not completed at the end of 2020. Therefore, the excess mortality rate
+does not say, about the virus mortality rate, than an order of magnitude.
 
 
 ## How many days of life did we lose in 2020?
@@ -199,11 +200,11 @@ summary(lm(all_youth_mortality$under_65 ~ all_youth_mortality$over_65))
 
 ## Did governement restrictions help?
 
-**No, government restrictions on freedom of movement and association were counter-productive.**
+**No, there is no indication that government restrictions on freedom of movement and association helped reducing mortality.**
 
 The principal response of European governments was to restrict the freedom of movement and association of the population. This is called "containment health"
-by the [Oxford Covid-19 Government Response Tracker](https://github.com/OxCGRT/covid-policy-tracker). The government's logic was that the more restrictions
-they put on the population, the lower the mortality will be.
+by the [Oxford Covid-19 Government Response Tracker](https://github.com/OxCGRT/covid-policy-tracker). Government justified their action by saying that mortality
+can be reduced by restricting the mobility and number of contacts of people.
 
 How did that turn out? Quite the opposite actually.
 
@@ -223,9 +224,10 @@ restriction_summary %>%
   labs( title = "Correlation of excess mortality with 'containment health' index")
 ```
 
-You can see that the correlation is weak but is _positive_: the more restrictions the government imposed, the more people died, or inversely (correlation is not reason).
-The correlation is not significant (80%), but what is significant is that there _absolutely no_ indication that government policies were useful in
+You can see that the correlation is _weak_ but is _positive_: the more restrictions the government imposed, the more people died, or inversely (correlation is not causality). The correlation is not significant (80%), but what is significant is that there_no_ indication that government policies were useful in
 reducing the mortality.
+
+Justifying restrictions on freedom based on comparisons between countries is a false argument. Data shows the opposite.
 
 
 ```{r}
@@ -234,7 +236,7 @@ restriction_death_correlation =
   filter( max_week_2020 == 53 ) %>%
     merge(all_death_score)
 
-summary( lm( restriction_death_correlation$death_increase ~ restriction_death_correlation$containment_health ) )
+
 ```
 
 
@@ -276,12 +278,11 @@ mobility_death_correlation =
 summary( lm( mobility_death_correlation$death_increase ~ mobility_death_correlation$residential ) )
 ```
 
-## Did those who went to nature die less? Did common sense work? 
+## Did those who went to nature die less? 
 
 **Yes, people who spent more time in nature died less.**
 
-My parents always repeated that, if I feel sick or tired, I should go for a walk in nature. (They are still repeating me that today and I should
-probably go for a walk instead of writing this study.) How is it?
+This is the most significant and surprising correlation found between Google mobility data and excess mortality.
 
 
 ```{r}
@@ -313,7 +314,7 @@ The more populations went to parks, gardens and nature, and the less they died.
 
 ## Did people die because of COVID-19 or because of lockdowns?
 
-**Old people probably died from COVID-19, young people probably from lockdowns. Babies died more when people did not go to their workplace. **
+**Old people probably died from COVID-19, young people probably from lockdowns. **
 
 People of all age groups died prematurely in 2020, except maybe early infancy. How is mortality in different age groups correlated
 to official COVID-19 mortality?
@@ -332,39 +333,7 @@ big_correlation %>%
   
 ```
 
-The most significant correlation is between infant mortality (0-4 years) and workplace. The more people avoided workplaces, the less babies died.
-However, in half of countries, babies died less than in a normal year.
 
-This is shown in the following graphs:
-
-
-```{r}
-
-workplace_infant_mortality_correlation =
-  mobility_summary %>%
-    merge( countries ) %>%
-    merge( all_mortality_by_age_supergroup ) %>%
-    filter( max_week_2020 == 53 & age_supergroup == '00-04' )
-
-workplace_infant_mortality_correlation %>%
-  ggplot(aes(y=excess_death_percent, x=-workplaces, label = country_iso_code )) +
-  geom_point() +
-  geom_label( color = "blue", nudge_y = -0.1, nudge_x = 0.0, alpha = 0.5 ) +
-  geom_smooth( alpha = 0.5, se = FALSE, method = "lm") +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1))  +
-  ylab("relative excess mortality") + xlab("decrease of workplace attendance (%)") +
-  labs( title = "Correlation of excess infant mortality with decreas of workplace attendance")
-
-```
-
-
-The correlation is has an significance of 95%:
-
-
-```{r}
-summary( lm( workplace_infant_mortality_correlation$excess_death_percent ~ workplace_infant_mortality_correlation$workplaces ) )
-
-```
 
 ## When was the last time there was such mortality?
 
@@ -408,9 +377,17 @@ all_years_with_more_mortality %>%
 ## Summary
 
 
-This article proofs, based on different sources of data, that government policies justified by the COVID-19 pandemic were inefficient at most,
-but quite probably counterproductive.
+This article suggests, based on different sources of data, that government policies justified by the COVID-19 pandemic were inefficient at most,
+but quite probably counterproductive. Arguments based on correlations are not sufficient to build a proof, however it is enough to invalidate
+the claims that lockdowns are a necessary and indisputable choice to reduce mortality. Hard lockdowns do not necessarily result in lower mortality.
+Actually, data shows an inverse correlation: the harder or longer the lockdowns, the higher the mortality.
 
-It shows that the perception of COVID-19 being a one-in-a-century disaster is unjustified.
+The most significant correlation and the biggest surprise is the correlation between the time people in nature and the mortality. It suggests governments
+should strongly encourage people to go out, where some have restricted that right.
 
-It shows that the claim that the principal victims of the "2020 phenomenon" are the 80+ is also inaccurate.
+This article also shows that the perception of COVID-19 being a one-in-a-century disaster is unjustified, because 2020 is similar to 2010 from the
+point of view of mortality, and to 1970 from the point of view of excess mortality.
+
+Finally, this article shows that the claim that the principal victims of the "2020" phenomenon are the 80+ is inaccurate. Almost all age groups have
+been affected, but there youth mortality seems due to lockdowns than to the virus. To a certain extent, the claim that the youth was sacrificed for the elders, 
+from a mortality point of view, seems  justified.
