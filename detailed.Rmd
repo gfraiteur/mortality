@@ -271,10 +271,11 @@ horizontal line showing the value of the mortality rate observed in 2020 (based 
 point of the horizontal line with the historical time series gives us the year in which the mortality observed in 2020
 was usual.
 
+DISABLED
 
 ```{r warning=FALSE}
-print_graphs(all_graphs_by_kind$comparative_death_rate_F)
-print_graphs(all_graphs_by_kind$comparative_death_rate_M)
+#print_graphs(all_graphs_by_kind$comparative_death_rate_F)
+#print_graphs(all_graphs_by_kind$comparative_death_rate_M)
 ```
 
 ### Historical comparison
@@ -295,8 +296,10 @@ Interesting points in these graphs are:
 * Although neglected by the mainstream media, most countries have a significantly higher mortality for surprisingly young age groups. 
 It would be interesting to analyze the cause of these deaths -- COVID-19 or lockdown?
 
+DISABLED
+
 ```{r warning=FALSE}
-print_graphs(all_graphs_by_kind$year_with_comparable_death_rate)
+# _kind$year_with_comparable_death_rate)
 ```
 
 
@@ -308,8 +311,10 @@ The following graphs gives a historic perspective on the _excess_ mortality rate
 excess mortality is found between 1950 and 1970.
 * This graph confirms that the mortality rates of some young or mid-life groups are at a historical high.
 
+DISABLED
+
 ```{r warning=FALSE}
-print_graphs(all_graphs_by_kind$year_with_comparable_excess_death_rate)
+# print_graphs(all_graphs_by_kind$year_with_comparable_excess_death_rate)
 ```
 
 

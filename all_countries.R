@@ -93,6 +93,7 @@ print_graphs = function(graphs) {
   
 }
 
+if ( FALSE ) {
 
 all_death_score = 
   all_years_with_more_mortality %>%
@@ -117,7 +118,7 @@ all_death_score =
   arrange( total_score ) %>%
   select( -max_excess_death_rate_regression, -max_death_rate_regression, -max_death_increase)
   
-
+}
 
 
 restriction_summary =
@@ -169,7 +170,7 @@ big_correlation =
   all_mortality_by_age_supergroup %>%
     merge( countries ) %>%
     merge( all_country_summary ) %>%
-    filter( max_week_2020 == 53 ) %>%
+    #filter( max_week_2020 == 53 ) %>%
     merge(mobility_summary) %>%
     merge( all_covid_death %>% 
              filter( country_iso_code %in% selected_countries_info$country_iso_code) %>% 
