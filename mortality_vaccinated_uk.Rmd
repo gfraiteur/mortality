@@ -1,0 +1,123 @@
+---
+title: "Compared all-cause mortality of vaccinated vs unvaccinated in England"
+output:
+  html_document:
+    df_print: paged
+  html_notebook:
+    theme: journal
+---
+
+```{r include=FALSE}
+library(dplyr)
+library(readxl)
+library(ggplot2)
+library(reshape2)
+library(formattable)
+library(gt)
+```
+
+This document shows that, according to data from the United Kingdom's Office for National Statistics, the risk to die for people aged between 10 and 59 who have 
+received at least one injection of a vaccine against COVID-19 is approximately 75-100% higher than the mortality of people of the same age group but who did
+*not* receive any injection against COVID-19.
+
+This analysis is very simple and you can repeat it yourself in a tool like Excel. This document has been created using the R statistical programming language. The source code of this document can be found online at (github link). We are including the scripts that collect and transform the data to make it easier for people with knowledge of programming to verify each step of the analysis.
+
+
+
+## Step 1. Loading the data
+
+If you want to analyze the data yourself, download it from [this page](https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsbyvaccinationstatusengland) of the United Kingdom's Office for National Statistics web site.
+
+We are using the following script to load the data:
+
+```{r}
+url = "https://www.ons.gov.uk/file?uri=%2fpeoplepopulationandcommunity%2fbirthsdeathsandmarriages%2fdeaths%2fdatasets%2fdeathsbyvaccinationstatusengland%2fdeathsoccurringbetween2januaryand24september2021/datasetfinalcorrected3.xlsx"
+filename = "datasetfinalcorrected3.xlsx"
+if ( !file.exists(filename)){
+  download.file(url, filename, mode="wb" )
+}
+dataset <- read_excel("datasetfinalcorrected3.xlsx", 
+    sheet = "Table 4", col_types = c("skip", 
+        "numeric", "text", "text", "numeric", 
+        "numeric", "numeric", "numeric", 
+        "skip", "numeric", "numeric"), na = ":", 
+    skip = 2)
+names(dataset) = c( "week","vaccination_status", "age_group", "deaths_number", "population", "population_total", "death_rate", "death_rate_min", "death_date_max")
+
+```
+
+## Step 2. Grouping by vaccination status
+
+The column *vaccination status* of this data set is interesting to us. The original data differentiates the population according to the following vaccination statuses:
+
+* Unvaccinated
+* Within 21 days of first dose
+* 21 days or more after first dose
+* Second dose
+* Not Available
+
+We exclude records where the vaccination status is not available and simplifies the status into just two categories:
+
+* Vaccinated,
+* Not vaccinated.
+
+```{r}
+dataset = dataset %>% filter( !is.na(dataset$vaccination_status))
+dataset$vaccinated = ifelse( dataset$vaccination_status != "Unvaccinated", "Vaccinated", "Unvaccinated" )
+```
+
+We summarize the data per week and per gross vaccination status:
+
+```{r warning=FALSE}
+dataset_summary = dataset %>%
+  filter( age_group == "10-59") %>%
+  group_by( vaccinated, week ) %>%
+  summarise( death_rate = sum( deaths_number ) /  sum( population ), .groups = 'drop')
+```
+
+## Step 3. Representing the time series as a graph
+
+Here is a graph of this data set:
+
+
+```{r echo=FALSE}
+
+dataset_summary %>%
+  ggplot(aes(x=week,y=death_rate, color = vaccinated)) +
+    geom_line() +
+    scale_x_continuous(name = "Week of 2021", minor_breaks = FALSE) +
+    scale_y_continuous(name = "Weekly mortality rate", limits = c(0, 5e-05)) +
+    ggtitle("Compared mortality of vaccinated vs unvaccinated in age group 10-59")
+  
+```
+
+As we can see, after the 6th week, the mortality of the vaccinated becomes greated than the one of the unvaccinated.
+
+## Step 5. Average mortality
+
+Let's compare, for both populations, the average mortality of these two groups after the 20th week of 2021. 
+
+```{r}
+
+mortality_tail =
+  dataset_summary %>%
+    filter( week >= 20 ) %>%
+    group_by( vaccinated ) %>%
+    summarise( death_rate = mean(death_rate) )
+
+mortality_compared = (( mortality_tail %>% filter( vaccinated == "Vaccinated"))$death_rate) / (( mortality_tail %>% filter( vaccinated == "Unvaccinated"))$death_rate)
+
+
+```
+
+This gives the following results:
+
+```{r echo=FALSE}
+mortality_tail %>%
+  knitr::kable( col.names = c("Vaccination Status", "Death Rate"))
+
+
+```
+
+We can see that the people in the *vaccinated* group had a `r percent(mortality_compared-1, 0)` higher risk to die than people that have not received any injection against covid19 between weeks 20 and `r max(dataset_summary$week)`.
+

@@ -214,6 +214,14 @@ The following graphs are identical but focus on 2020:
 print_graphs(all_graphs_by_kind$expected_death_per_week_2020)
 ```
 
+### Excess mortality per week and age group
+
+
+
+```{r warning=FALSE}
+print_graphs(all_graphs_by_kind$cumulative_excess_death_per_age_group_and_week)
+```
+
 
 ## Cumulative excess mortality
 

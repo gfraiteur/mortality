@@ -161,8 +161,9 @@ all_mortality_by_age_supergroup_dcast =
   all_mortality_by_age_supergroup %>%
     dcast( country_hmd_code ~ age_supergroup, value.var="excess_death_percent" ) %>%
     rename ( excess_death_infant = "00-04",
-             excess_death_youth = "05-19",
-             excess_death_active = "20-64", 
+             excess_death_youth = "05-24",
+             excess_death_active_1 = "25-44",
+             excess_death_active_2 = "45-64", 
              excess_death_retired = "65-84",
              excess_death_elder = "85+")
 
