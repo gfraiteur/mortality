@@ -16,15 +16,12 @@ library(formattable)
 library(gt)
 ```
 
-This document shows that, according to data from the United Kingdom's Office for National Statistics, the risk to die for people aged between 10 and 59 who have 
-received at least one injection of a vaccine against COVID-19 is approximately 75-100% higher than the mortality of people of the same age group but who did
-*not* receive any injection against COVID-19.
+This document analyzes mortality data published by the United Kingdom's Office for National Statistics. It compares the mortality of people, aged between 10 and 59, with different vaccination status.
 
-This analysis is very simple and you can repeat it yourself in a tool like Excel. This document has been created using the R statistical programming language. The source code of this document can be found online on [GitHub](https://github.com/gfraiteur/mortality/blob/main/mortality_vaccinated_uk.Rmd). We are including the scripts that collect and transform the data to make it easier for people with knowledge of programming to verify each step of the analysis.
+No conclusion can be drawn from this analysis because the groups with different vaccination statuses have different age structure, therefore different age mortality.
 
+ This document has been created using the R statistical programming language. The source code of this document can be found online on [GitHub](https://github.com/gfraiteur/mortality/blob/main/mortality_vaccinated_uk.Rmd). We are including the scripts that collect and transform the data to make it easier for people with knowledge of programming to verify each step of the analysis.
 
-
-## Step 1. Loading the data
 
 If you want to analyze the data yourself, download it from [this page](https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsbyvaccinationstatusengland) of the United Kingdom's Office for National Statistics web site.
 
@@ -43,10 +40,10 @@ dataset <- read_excel("datasetfinalcorrected3.xlsx",
         "skip", "numeric", "numeric"), na = ":", 
     skip = 2)
 names(dataset) = c( "week","vaccination_status", "age_group", "deaths_number", "population", "population_total", "death_rate", "death_rate_min", "death_date_max")
+dataset = dataset %>% filter( !is.na(dataset$vaccination_status))
 
 ```
 
-## Step 2. Grouping by vaccination status
 
 The column *vaccination status* of this data set is interesting to us. The original data differentiates the population according to the following vaccination statuses:
 
@@ -54,58 +51,37 @@ The column *vaccination status* of this data set is interesting to us. The origi
 * Within 21 days of first dose
 * 21 days or more after first dose
 * Second dose
-* Not Available
 
-We exclude records where the vaccination status is not available and simplifies the status into just two categories:
 
-* Vaccinated,
-* Not vaccinated.
-
-```{r}
-dataset = dataset %>% filter( !is.na(dataset$vaccination_status))
-dataset$vaccinated = ifelse( dataset$vaccination_status != "Unvaccinated", "Vaccinated", "Unvaccinated" )
-```
-
-We summarize the data per week and per gross vaccination status:
+We can now draw a graph of this data for the 10-59 age group:
 
 ```{r warning=FALSE}
-dataset_summary = dataset %>%
+
+dataset %>%
   filter( age_group == "10-59") %>%
-  group_by( vaccinated, week ) %>%
-  summarise( death_rate = sum( deaths_number ) /  sum( population ), .groups = 'drop')
-```
-
-## Step 3. Representing the time series as a graph
-
-Here is a graph of this data set:
-
-
-```{r echo=FALSE}
-
-dataset_summary %>%
-  ggplot(aes(x=week,y=death_rate, color = vaccinated)) +
-    geom_line() +
+  ggplot(aes(x=week,y=death_rate, color = vaccination_status, shape = vaccination_status)) +
+  geom_point() +
+  geom_line() +
     scale_x_continuous(name = "Week of 2021", minor_breaks = FALSE) +
-    scale_y_continuous(name = "Weekly mortality rate", limits = c(0, 5e-05)) +
-    ggtitle("Compared mortality of vaccinated vs unvaccinated in age group 10-59")
-  
+    scale_y_continuous(name = "Weekly mortality rate") +
+    ggtitle("Weekly mortality rate for different vaccination statues")
 ```
 
-As we can see, after the 6th week, the mortality of the vaccinated becomes greated than the one of the unvaccinated.
 
-## Step 5. Average mortality
+As we can see, after the 6th week, the mortality of the vaccinated becomes greater than the one of the unvaccinated.
 
-Let's compare, for both populations, the average mortality of these two groups after the 20th week of 2021. 
+Let's compare, for both populations, the average mortality of these groups after the 20th week of 2021. 
 
 ```{r}
 
 mortality_tail =
-  dataset_summary %>%
+  dataset %>%
+    filter( age_group == "10-59") %>%
     filter( week >= 20 ) %>%
-    group_by( vaccinated ) %>%
+    group_by( vaccination_status ) %>%
     summarise( death_rate = mean(death_rate) )
 
-mortality_compared = (( mortality_tail %>% filter( vaccinated == "Vaccinated"))$death_rate) / (( mortality_tail %>% filter( vaccinated == "Unvaccinated"))$death_rate)
+mortality_compared = (( mortality_tail %>% filter( vaccination_status == "Second dose"))$death_rate) / (( mortality_tail %>% filter( vaccination_status == "Unvaccinated"))$death_rate)
 
 
 ```
@@ -119,5 +95,11 @@ mortality_tail %>%
 
 ```
 
-We can see that the people in the *vaccinated* group had a `r percent(mortality_compared-1, 0)` higher risk to die than people that have not received any injection against covid19 between weeks 20 and `r max(dataset_summary$week)`.
+We can see that the people having vaccinated with two doses have a `r percent(mortality_compared-1, 0)` higher risk to die than people that have not received any injection against covid19 between weeks 20 and `r max(dataset$week)`.
 
+## Possible interpretations
+
+This data is difficult to interpret because the age group is very wide. The cohorts of vaccinated and unvaccinated people have different age structures and therefore,
+naturally, different mortality.
+
+The next step of the analysis would be to unskew the data using the age structure of the two cohorts, based on vaccination data and on normal mortality rate for each group.
