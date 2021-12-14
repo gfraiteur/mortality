@@ -44,4 +44,5 @@ rsconnect/
 passwords.R
 .RDataTmp*
 *.png
-*.xslx
+*.xlsx
+*.nb.html

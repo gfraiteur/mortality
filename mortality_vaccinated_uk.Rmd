@@ -20,7 +20,7 @@ This document shows that, according to data from the United Kingdom's Office for
 received at least one injection of a vaccine against COVID-19 is approximately 75-100% higher than the mortality of people of the same age group but who did
 *not* receive any injection against COVID-19.
 
-This analysis is very simple and you can repeat it yourself in a tool like Excel. This document has been created using the R statistical programming language. The source code of this document can be found online at (github link). We are including the scripts that collect and transform the data to make it easier for people with knowledge of programming to verify each step of the analysis.
+This analysis is very simple and you can repeat it yourself in a tool like Excel. This document has been created using the R statistical programming language. The source code of this document can be found online on [GitHub](https://github.com/gfraiteur/mortality/blob/main/mortality_vaccinated_uk.Rmd). We are including the scripts that collect and transform the data to make it easier for people with knowledge of programming to verify each step of the analysis.
 
 
 
